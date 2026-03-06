@@ -206,3 +206,6 @@ prd/**/*.mov
 !.env.example
 .dev.vars*
 !.dev.vars.example
+
+### Cursor ###
+.cursor/
