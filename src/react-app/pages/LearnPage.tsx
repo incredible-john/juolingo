@@ -8,6 +8,7 @@ import { TranslateChallenge, getTranslateCorrectAnswer } from "@/components/lear
 import { FillBlankChallenge, getFillBlankCorrectAnswer } from "@/components/learn/FillBlankChallenge";
 import { MatchPairsChallenge, getMatchPairsCorrectAnswer } from "@/components/learn/MatchPairsChallenge";
 import { SelectTranslationChallenge, getSelectTranslationCorrectAnswer } from "@/components/learn/SelectTranslationChallenge";
+import { LessonComplete } from "@/components/learn/LessonComplete";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { playCorrectSound, playIncorrectSound } from "@/lib/sounds";
 
@@ -50,6 +51,7 @@ export function LearnPage() {
 	const [hearts, setHearts] = useState(MAX_HEARTS);
 	const [answered, setAnswered] = useState(false);
 	const [isCorrect, setIsCorrect] = useState(false);
+	const [isComplete, setIsComplete] = useState(false);
 
 	useEffect(() => {
 		if (!id) return;
@@ -64,9 +66,10 @@ export function LearnPage() {
 
 	useEffect(() => {
 		if (!loading && queue.length > 0 && currentIndex >= queue.length) {
-			navigate(-1);
+			// 所有题目都完成了，显示完成界面
+			setIsComplete(true);
 		}
-	}, [queue.length, currentIndex, loading, navigate]);
+	}, [queue.length, currentIndex, loading]);
 
 	const currentItem = queue[currentIndex] as QueueItem | undefined;
 	const current = currentItem?.challenge;
@@ -150,6 +153,14 @@ export function LearnPage() {
 						Go back
 					</button>
 				</div>
+			</MobileShell>
+		);
+	}
+
+	if (isComplete) {
+		return (
+			<MobileShell>
+				<LessonComplete hearts={hearts} maxHearts={MAX_HEARTS} />
 			</MobileShell>
 		);
 	}
