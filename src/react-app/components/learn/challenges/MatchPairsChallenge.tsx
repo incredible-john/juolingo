@@ -62,11 +62,12 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 		setMatchedPairs(newPairs);
 		setSelectedLeft(null);
 		setSelectedRight(null);
-	};
 
-	const handleCheck = () => {
-		const answer = matchedPairs.map((p) => `${p.leftId}-${p.rightId}`).join(",");
-		onAnswer(answer);
+		if (newPairs.length === leftItems.length) {
+			const sortedPairs = [...newPairs].sort((a, b) => a.leftId - b.leftId);
+			const answer = sortedPairs.map((p) => `${p.leftId}-${p.rightId}`).join(",");
+			onAnswer(answer);
+		}
 	};
 
 	return (
@@ -124,8 +125,8 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 			</div>
 
 			{/* Check button */}
-			{!answered && matchedPairs.length > 0 && (
-				<CheckButton onClick={handleCheck} disabled={matchedPairs.length === 0} />
+			{!answered && (
+				<CheckButton onClick={() => {}} disabled={true} />
 			)}
 		</div>
 	);
