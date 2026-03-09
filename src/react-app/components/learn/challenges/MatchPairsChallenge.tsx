@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Challenge } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { CheckButton } from "./CheckButton";
 
 interface MatchPairsChallengeProps {
 	challenge: Challenge;
@@ -61,11 +62,11 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 		setMatchedPairs(newPairs);
 		setSelectedLeft(null);
 		setSelectedRight(null);
+	};
 
-		if (newPairs.length === leftItems.length) {
-			const answer = newPairs.map((p) => `${p.leftId}-${p.rightId}`).join(",");
-			onAnswer(answer);
-		}
+	const handleCheck = () => {
+		const answer = matchedPairs.map((p) => `${p.leftId}-${p.rightId}`).join(",");
+		onAnswer(answer);
 	};
 
 	return (
@@ -121,6 +122,11 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 					</div>
 				</div>
 			</div>
+
+			{/* Check button */}
+			{!answered && matchedPairs.length > 0 && (
+				<CheckButton onClick={handleCheck} disabled={matchedPairs.length === 0} />
+			)}
 		</div>
 	);
 }
