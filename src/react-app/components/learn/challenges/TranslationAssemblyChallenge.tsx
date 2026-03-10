@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { Challenge } from "@/lib/types";
 import { AudioButton } from "../AudioButton";
+import { InteractiveWord } from "../InteractiveWord";
 import { WordTile } from "../WordTile";
 import { CheckButton } from "./CheckButton";
 
@@ -8,6 +9,36 @@ interface TranslationAssemblyChallengeProps {
 	challenge: Challenge;
 	onAnswer: (answer: string) => void;
 	answered: boolean;
+}
+
+// Helper function to split text into words
+function parseWords(text: string): Array<{ type: "word" | "space"; value: string }> {
+	const result: Array<{ type: "word" | "space"; value: string }> = [];
+	const wordRegex = /(\s+)/g;
+	let lastIndex = 0;
+	let match;
+
+	while ((match = wordRegex.exec(text)) !== null) {
+		if (match.index > lastIndex) {
+			const word = text.slice(lastIndex, match.index).trim();
+			if (word) {
+				result.push({ type: "word", value: word });
+			}
+		}
+		if (match[1]) {
+			result.push({ type: "space", value: match[1] });
+		}
+		lastIndex = wordRegex.lastIndex;
+	}
+
+	if (lastIndex < text.length) {
+		const word = text.slice(lastIndex).trim();
+		if (word) {
+			result.push({ type: "word", value: word });
+		}
+	}
+
+	return result;
 }
 
 export function TranslationAssemblyChallenge({ challenge, onAnswer, answered }: TranslationAssemblyChallengeProps) {
@@ -31,6 +62,17 @@ export function TranslationAssemblyChallenge({ challenge, onAnswer, answered }: 
 			audioRef.current?.pause();
 		};
 	}, [challenge.question]);
+
+	// Render text with interactive words
+	const renderInteractiveText = (text: string) => {
+		const parsed = parseWords(text);
+		return parsed.map((item, idx) => {
+			if (item.type === "space") {
+				return <span key={idx}>{item.value}</span>;
+			}
+			return <InteractiveWord key={idx} word={item.value} className="text-base font-medium" />;
+		});
+	};
 
 	const handleSelectFromBank = useCallback(
 		(idx: number) => {
@@ -66,7 +108,7 @@ export function TranslationAssemblyChallenge({ challenge, onAnswer, answered }: 
 					</div>
 					<div className="flex items-center gap-2 bg-white border-2 border-border rounded-2xl px-4 py-3 shadow-sm relative">
 						<AudioButton text={challenge.question} size="sm" />
-						<span className="text-base font-medium">{challenge.question}</span>
+						<span className="text-base font-medium">{renderInteractiveText(challenge.question)}</span>
 					</div>
 				</div>
 			</div>

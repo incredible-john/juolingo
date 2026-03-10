@@ -24,6 +24,9 @@
 		"bucket_name": "juolingo-voice"
 		}
 	],
+	"vars": {
+		"BAIDU_APP_ID": "20260310002569731"
+	},
 	"routes": [
 		{
 			"pattern": "zhonglinguo.top",

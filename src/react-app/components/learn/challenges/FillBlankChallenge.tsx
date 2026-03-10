@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { Challenge } from "@/lib/types";
 import { AudioButton } from "../AudioButton";
+import { InteractiveWord } from "../InteractiveWord";
 import { cn } from "@/lib/utils";
 import { CheckButton } from "./CheckButton";
 
@@ -8,6 +9,16 @@ interface FillBlankChallengeProps {
 	challenge: Challenge;
 	onAnswer: (answer: string) => void;
 	answered: boolean;
+}
+
+// Helper function to split text into words while preserving spaces and punctuation
+function parseWords(text: string): Array<{ type: "word" | "space"; value: string }> {
+	const parts = text.split(/(\s+)/);
+	return parts
+		.filter((p) => p.length > 0)
+		.map((part) =>
+			/^\s+$/.test(part) ? { type: "space" as const, value: part } : { type: "word" as const, value: part }
+		);
 }
 
 export function FillBlankChallenge({ challenge, onAnswer, answered }: FillBlankChallengeProps) {
@@ -33,6 +44,17 @@ export function FillBlankChallenge({ challenge, onAnswer, answered }: FillBlankC
 		};
 	}, [challenge.question]);
 
+	// Render text with interactive words
+	const renderInteractiveText = (text: string) => {
+		const parsed = parseWords(text);
+		return parsed.map((item, idx) => {
+			if (item.type === "space") {
+				return <span key={idx}>{item.value}</span>;
+			}
+			return <InteractiveWord key={idx} word={item.value} className="text-base font-medium" />;
+		});
+	};
+
 	return (
 		<div className="flex flex-col flex-1">
 			<div className="px-6 pt-4 pb-2">
@@ -46,11 +68,11 @@ export function FillBlankChallenge({ challenge, onAnswer, answered }: FillBlankC
 					<div className="bg-white border-2 border-border rounded-2xl px-4 py-3 shadow-sm">
 						<div className="flex items-center gap-1 flex-wrap">
 							<AudioButton text={challenge.question} size="sm" className="mr-1" />
-							<span className="text-base font-medium">{parts[0]}</span>
+							{parts[0] && renderInteractiveText(parts[0])}
 							<span className="inline-block min-w-[4rem] border-b-2 border-duo-blue text-center font-bold text-duo-blue px-1">
 								{selectedOption?.text ?? ""}
 							</span>
-							{parts[1] && <span className="text-base font-medium">{parts[1]}</span>}
+							{parts[1] && renderInteractiveText(parts[1])}
 						</div>
 					</div>
 				</div>
