@@ -4,7 +4,7 @@ import { getLesson } from "@/lib/api";
 import type { Challenge, LessonWithChallenges } from "@/lib/types";
 import { ChallengeHeader } from "@/components/learn/challenges/ChallengeHeader";
 import { FeedbackBanner } from "@/components/learn/challenges/FeedbackBanner";
-import { TranslateChallenge, getTranslateCorrectAnswer } from "@/components/learn/challenges/TranslateChallenge";
+import { TranslationAssemblyChallenge, getTranslationAssemblyCorrectAnswer } from "@/components/learn/challenges/TranslationAssemblyChallenge";
 import { FillBlankChallenge, getFillBlankCorrectAnswer } from "@/components/learn/challenges/FillBlankChallenge";
 import { MatchPairsChallenge, getMatchPairsCorrectAnswer } from "@/components/learn/challenges/MatchPairsChallenge";
 import { SelectTranslationChallenge, getSelectTranslationCorrectAnswer } from "@/components/learn/challenges/SelectTranslationChallenge";
@@ -24,7 +24,7 @@ type QueueItem = {
 function getCorrectAnswer(challenge: Challenge): string {
 	switch (challenge.type) {
 		case "TRANSLATE":
-			return getTranslateCorrectAnswer(challenge);
+			return getTranslationAssemblyCorrectAnswer(challenge);
 		case "FILL_BLANK":
 			return getFillBlankCorrectAnswer(challenge);
 		case "MATCH_PAIRS":
@@ -176,7 +176,7 @@ export function LearnPage() {
 			{current && currentItem && (
 				<div className="flex-1 flex flex-col" key={currentItem.key}>
 					{current.type === "TRANSLATE" && (
-						<TranslateChallenge
+						<TranslationAssemblyChallenge
 							challenge={current}
 							onAnswer={handleAnswer}
 							answered={answered}

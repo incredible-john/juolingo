@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Challenge } from "@/lib/types";
 import { AudioButton } from "../AudioButton";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,24 @@ export function SelectTranslationChallenge({
 	answered,
 }: SelectTranslationChallengeProps) {
 	const [selectedId, setSelectedId] = useState<number | null>(null);
+	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const selectedOption = challenge.options.find((o) => o.id === selectedId);
+
+	// Auto-play question audio on mount
+	useEffect(() => {
+		const playAudio = () => {
+			if (audioRef.current) {
+				audioRef.current.pause();
+			}
+			const url = `/api/audio/tts?text=${encodeURIComponent(challenge.question)}`;
+			audioRef.current = new Audio(url);
+			audioRef.current.play().catch(() => {});
+		};
+		playAudio();
+		return () => {
+			audioRef.current?.pause();
+		};
+	}, [challenge.question]);
 
 	return (
 		<div className="flex flex-col flex-1">
@@ -30,9 +47,7 @@ export function SelectTranslationChallenge({
 						<div className="w-12 h-16 rounded-t-full bg-duo-orange/60" />
 					</div>
 					<div className="flex items-center gap-2 bg-white border-2 border-border rounded-2xl px-4 py-3 shadow-sm">
-						{challenge.audioUrl && (
-							<AudioButton audioUrl={challenge.audioUrl} size="sm" />
-						)}
+						<AudioButton text={challenge.question} size="sm" />
 						<span className="text-base font-medium">{challenge.question}</span>
 					</div>
 				</div>

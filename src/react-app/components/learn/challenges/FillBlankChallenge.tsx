@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Challenge } from "@/lib/types";
 import { AudioButton } from "../AudioButton";
 import { cn } from "@/lib/utils";
@@ -12,9 +12,26 @@ interface FillBlankChallengeProps {
 
 export function FillBlankChallenge({ challenge, onAnswer, answered }: FillBlankChallengeProps) {
 	const [selectedId, setSelectedId] = useState<number | null>(null);
+	const audioRef = useRef<HTMLAudioElement | null>(null);
 
 	const parts = challenge.question.split("___");
 	const selectedOption = challenge.options.find((o) => o.id === selectedId);
+
+	// Auto-play question audio on mount
+	useEffect(() => {
+		const playAudio = () => {
+			if (audioRef.current) {
+				audioRef.current.pause();
+			}
+			const url = `/api/audio/tts?text=${encodeURIComponent(challenge.question)}`;
+			audioRef.current = new Audio(url);
+			audioRef.current.play().catch(() => {});
+		};
+		playAudio();
+		return () => {
+			audioRef.current?.pause();
+		};
+	}, [challenge.question]);
 
 	return (
 		<div className="flex flex-col flex-1">
@@ -28,9 +45,7 @@ export function FillBlankChallenge({ challenge, onAnswer, answered }: FillBlankC
 					</div>
 					<div className="bg-white border-2 border-border rounded-2xl px-4 py-3 shadow-sm">
 						<div className="flex items-center gap-1 flex-wrap">
-							{challenge.audioUrl && (
-								<AudioButton audioUrl={challenge.audioUrl} size="sm" className="mr-1" />
-							)}
+							<AudioButton text={challenge.question} size="sm" className="mr-1" />
 							<span className="text-base font-medium">{parts[0]}</span>
 							<span className="inline-block min-w-[4rem] border-b-2 border-duo-blue text-center font-bold text-duo-blue px-1">
 								{selectedOption?.text ?? ""}

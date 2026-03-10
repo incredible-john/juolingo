@@ -1,19 +1,36 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { Challenge } from "@/lib/types";
 import { AudioButton } from "../AudioButton";
 import { WordTile } from "../WordTile";
 import { CheckButton } from "./CheckButton";
 
-interface TranslateChallengeProps {
+interface TranslationAssemblyChallengeProps {
 	challenge: Challenge;
 	onAnswer: (answer: string) => void;
 	answered: boolean;
 }
 
-export function TranslateChallenge({ challenge, onAnswer, answered }: TranslateChallengeProps) {
+export function TranslationAssemblyChallenge({ challenge, onAnswer, answered }: TranslationAssemblyChallengeProps) {
 	const [selected, setSelected] = useState<number[]>([]);
+	const audioRef = useRef<HTMLAudioElement | null>(null);
 
 	const options = challenge.options;
+
+	// Auto-play question audio on mount
+	useEffect(() => {
+		const playAudio = () => {
+			if (audioRef.current) {
+				audioRef.current.pause();
+			}
+			const url = `/api/audio/tts?text=${encodeURIComponent(challenge.question)}`;
+			audioRef.current = new Audio(url);
+			audioRef.current.play().catch(() => {});
+		};
+		playAudio();
+		return () => {
+			audioRef.current?.pause();
+		};
+	}, [challenge.question]);
 
 	const handleSelectFromBank = useCallback(
 		(idx: number) => {
@@ -48,7 +65,7 @@ export function TranslateChallenge({ challenge, onAnswer, answered }: TranslateC
 						<div className="w-12 h-16 rounded-t-full bg-duo-purple/60" />
 					</div>
 					<div className="flex items-center gap-2 bg-white border-2 border-border rounded-2xl px-4 py-3 shadow-sm relative">
-						<AudioButton audioUrl={challenge.audioUrl} size="sm" />
+						<AudioButton text={challenge.question} size="sm" />
 						<span className="text-base font-medium">{challenge.question}</span>
 					</div>
 				</div>
@@ -92,7 +109,7 @@ export function TranslateChallenge({ challenge, onAnswer, answered }: TranslateC
 	);
 }
 
-export function getTranslateCorrectAnswer(challenge: Challenge): string {
+export function getTranslationAssemblyCorrectAnswer(challenge: Challenge): string {
 	return challenge.options
 		.filter((o) => o.isCorrect)
 		.sort((a, b) => a.order - b.order)
