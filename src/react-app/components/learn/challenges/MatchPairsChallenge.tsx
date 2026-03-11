@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
-import type { Challenge } from "@/lib/types";
+import { useState, useMemo, useRef } from "react";
+import type { Challenge, ChallengeOption } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CheckButton } from "./CheckButton";
+import { playIncorrectSound } from "@/lib/sounds";
 
 interface MatchPairsChallengeProps {
 	challenge: Challenge;
@@ -14,22 +15,43 @@ interface Pair {
 	rightId: number;
 }
 
+// Check if text contains Chinese characters
+const isChinese = (text: string): boolean => /[\u4e00-\u9fa5]/.test(text);
+
+// Play audio for a given text
+const playWordAudio = (text: string, audioRef: React.RefObject<HTMLAudioElement | null>) => {
+	if (audioRef.current) {
+		audioRef.current.pause();
+	}
+	const audio = new Audio(`/api/audio/tts?text=${encodeURIComponent(text)}`);
+	audioRef.current = audio;
+	audio.play().catch(() => {});
+};
+
 export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPairsChallengeProps) {
 	const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
 	const [selectedRight, setSelectedRight] = useState<number | null>(null);
 	const [matchedPairs, setMatchedPairs] = useState<Pair[]>([]);
+	const [errorPair, setErrorPair] = useState<{ leftId: number; rightId: number } | null>(null);
+	const audioRef = useRef<HTMLAudioElement | null>(null);
 
-	const leftItems = useMemo(
-		() => challenge.options.filter((_, i) => i % 2 === 0),
-		[challenge.options]
-	);
-	const rightItems = useMemo(
-		() => challenge.options.filter((_, i) => i % 2 === 1),
-		[challenge.options]
-	);
+	// Separate Chinese (left) and English (right) options
+	const { chineseItems, englishItems } = useMemo(() => {
+		const chinese: ChallengeOption[] = [];
+		const english: ChallengeOption[] = [];
+		challenge.options.forEach((opt) => {
+			if (isChinese(opt.text)) {
+				chinese.push(opt);
+			} else {
+				english.push(opt);
+			}
+		});
+		return { chineseItems: chinese, englishItems: english };
+	}, [challenge.options]);
 
-	const shuffledRight = useMemo(() => {
-		const arr = [...rightItems];
+	// Shuffle English items for display
+	const shuffledEnglish = useMemo(() => {
+		const arr = [...englishItems];
 		for (let i = arr.length - 1; i > 0; i--) {
 			const j = Math.floor(Math.random() * (i + 1));
 			[arr[i], arr[j]] = [arr[j], arr[i]];
@@ -43,14 +65,28 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 
 	const handleLeftClick = (id: number) => {
 		if (answered || isLeftMatched(id)) return;
+		// Toggle off if already selected
+		if (selectedLeft === id) {
+			setSelectedLeft(null);
+			return;
+		}
 		setSelectedLeft(id);
 		if (selectedRight !== null) {
 			tryMatch(id, selectedRight);
 		}
 	};
 
-	const handleRightClick = (id: number) => {
+	const handleRightClick = (id: number, item: ChallengeOption) => {
 		if (answered || isRightMatched(id)) return;
+
+		// Play audio for English word
+		playWordAudio(item.text, audioRef);
+
+		// Toggle off if already selected
+		if (selectedRight === id) {
+			setSelectedRight(null);
+			return;
+		}
 		setSelectedRight(id);
 		if (selectedLeft !== null) {
 			tryMatch(selectedLeft, id);
@@ -58,12 +94,31 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 	};
 
 	const tryMatch = (leftId: number, rightId: number) => {
+		// Check if this is a correct match
+		const leftIndex = chineseItems.findIndex((l) => l.id === leftId);
+		const correctRightId = englishItems[leftIndex]?.id;
+		const isCorrect = correctRightId === rightId;
+
+		if (!isCorrect) {
+			// Show error state and play sound
+			setErrorPair({ leftId, rightId });
+			playIncorrectSound();
+
+			// Reset after delay
+			setTimeout(() => {
+				setErrorPair(null);
+				setSelectedLeft(null);
+				setSelectedRight(null);
+			}, 500);
+			return;
+		}
+
 		const newPairs = [...matchedPairs, { leftId, rightId }];
 		setMatchedPairs(newPairs);
 		setSelectedLeft(null);
 		setSelectedRight(null);
 
-		if (newPairs.length === leftItems.length) {
+		if (newPairs.length === chineseItems.length) {
 			const sortedPairs = [...newPairs].sort((a, b) => a.leftId - b.leftId);
 			const answer = sortedPairs.map((p) => `${p.leftId}-${p.rightId}`).join(",");
 			onAnswer(answer);
@@ -78,9 +133,9 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 
 			<div className="px-6 flex-1">
 				<div className="grid grid-cols-2 gap-3">
-					{/* Left column */}
+					{/* Left column - Chinese */}
 					<div className="space-y-3">
-						{leftItems.map((item) => (
+						{chineseItems.map((item) => (
 							<button
 								key={item.id}
 								onClick={() => handleLeftClick(item.id)}
@@ -90,9 +145,11 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 									"border-b-4 active:border-b-2",
 									isLeftMatched(item.id)
 										? "bg-duo-green-light border-duo-green text-duo-green-dark opacity-70"
-										: selectedLeft === item.id
-											? "bg-duo-blue/10 border-duo-blue text-duo-blue"
-											: "bg-white border-border text-foreground hover:border-duo-gray-dark"
+										: errorPair?.leftId === item.id
+											? "bg-red-100 border-red-500 text-red-700"
+											: selectedLeft === item.id
+												? "bg-duo-blue/10 border-duo-blue text-duo-blue"
+												: "bg-white border-border text-foreground hover:border-duo-gray-dark"
 								)}
 							>
 								{item.text}
@@ -100,24 +157,26 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 						))}
 					</div>
 
-					{/* Right column */}
+					{/* Right column - English (shuffled) */}
 					<div className="space-y-3">
-						{shuffledRight.map((item) => (
+						{shuffledEnglish.map((item) => (
 							<button
 								key={item.id}
-								onClick={() => handleRightClick(item.id)}
+								onClick={() => handleRightClick(item.id, item)}
 								disabled={answered || isRightMatched(item.id)}
 								className={cn(
 									"w-full py-4 px-4 rounded-2xl border-2 font-medium transition-all text-center",
 									"border-b-4 active:border-b-2",
 									isRightMatched(item.id)
 										? "bg-duo-green-light border-duo-green text-duo-green-dark opacity-70"
-										: selectedRight === item.id
-											? "bg-duo-blue/10 border-duo-blue text-duo-blue"
-											: "bg-white border-border text-foreground hover:border-duo-gray-dark"
+										: errorPair?.rightId === item.id
+											? "bg-red-100 border-red-500 text-red-700"
+											: selectedRight === item.id
+												? "bg-duo-blue/10 border-duo-blue text-duo-blue"
+												: "bg-white border-border text-foreground hover:border-duo-gray-dark"
 								)}
 							>
-								{item.text}
+							{item.text}
 							</button>
 						))}
 					</div>
@@ -133,7 +192,14 @@ export function MatchPairsChallenge({ challenge, onAnswer, answered }: MatchPair
 }
 
 export function getMatchPairsCorrectAnswer(challenge: Challenge): string {
-	const leftItems = challenge.options.filter((_, i) => i % 2 === 0);
-	const rightItems = challenge.options.filter((_, i) => i % 2 === 1);
-	return leftItems.map((l, i) => `${l.id}-${rightItems[i].id}`).join(",");
+	const chinese: ChallengeOption[] = [];
+	const english: ChallengeOption[] = [];
+	challenge.options.forEach((opt) => {
+		if (isChinese(opt.text)) {
+			chinese.push(opt);
+		} else {
+			english.push(opt);
+		}
+	});
+	return chinese.map((c, i) => `${c.id}-${english[i].id}`).join(",");
 }
