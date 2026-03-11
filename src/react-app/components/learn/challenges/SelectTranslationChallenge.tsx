@@ -1,9 +1,19 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import type { Challenge } from "@/lib/types";
 import { AudioButton } from "../AudioButton";
 import { InteractiveWord } from "../InteractiveWord";
 import { cn } from "@/lib/utils";
 import { CheckButton } from "./CheckButton";
+
+// Fisher-Yates shuffle algorithm
+function shuffleArray<T>(array: T[]): T[] {
+	const shuffled = [...array];
+	for (let i = shuffled.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+	}
+	return shuffled;
+}
 
 interface SelectTranslationChallengeProps {
 	challenge: Challenge;
@@ -28,7 +38,14 @@ export function SelectTranslationChallenge({
 }: SelectTranslationChallengeProps) {
 	const [selectedId, setSelectedId] = useState<number | null>(null);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
-	const selectedOption = challenge.options.find((o) => o.id === selectedId);
+
+	// Shuffle options randomly
+	const shuffledOptions = useMemo(
+		() => shuffleArray(challenge.options),
+		[challenge.options]
+	);
+
+	const selectedOption = shuffledOptions.find((o) => o.id === selectedId);
 
 	// Auto-play question audio on mount
 	useEffect(() => {
@@ -65,7 +82,7 @@ export function SelectTranslationChallenge({
 				</h2>
 
 				<div className="flex items-start gap-3 mb-6">
-					<div className="flex-shrink-0 w-20 h-24 rounded-2xl bg-duo-orange/20 flex items-end justify-center overflow-hidden">
+					<div className="shrink-0 w-20 h-24 rounded-2xl bg-duo-orange/20 flex items-end justify-center overflow-hidden">
 						<div className="w-12 h-16 rounded-t-full bg-duo-orange/60" />
 					</div>
 					<div className="flex items-center gap-2 bg-white border-2 border-border rounded-2xl px-4 py-3 shadow-sm">
@@ -76,7 +93,7 @@ export function SelectTranslationChallenge({
 			</div>
 
 			<div className="px-6 flex-1 space-y-3">
-				{challenge.options.map((opt) => (
+				{shuffledOptions.map((opt) => (
 					<button
 						key={opt.id}
 						onClick={() => !answered && setSelectedId(opt.id)}
