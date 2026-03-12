@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router";
 import { SubjectsPage } from "./pages/SubjectsPage";
 import { UnitsPage } from "./pages/UnitsPage";
 import { LearnPage } from "./pages/LearnPage";
-import { AdminPage } from "./pages/AdminPage";
+import AdminPage from "./pages/AdminPage";
 
 export default function App() {
 	return (

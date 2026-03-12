@@ -1,11 +1,34 @@
-import { useState, useEffect, useCallback } from "react";
-import { AdminShell } from "@/components/layout/AdminShell";
-import { Routes, Route } from "react-router";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { Subject, Lesson, ChallengeType } from "@/lib/types";
-
-const API = "/api/admin";
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router";
+import {
+	getSubjects,
+	getUnits,
+	getLessons,
+	getChallenges,
+	getChallengeOptions,
+	createSubject,
+	updateSubject,
+	deleteSubject,
+	createUnit,
+	updateUnit,
+	deleteUnit,
+	createLesson,
+	updateLesson,
+	deleteLesson,
+	createChallenge,
+	updateChallenge,
+	deleteChallenge,
+	createChallengeOption,
+	updateChallengeOption,
+	deleteChallengeOption,
+} from "@/lib/api";
+import type { Subject, Challenge, ChallengeOption, ChallengeType } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, Plus, Pencil, Trash2, GripVertical, Settings2 } from "lucide-react";
 
 interface Unit {
 	id: number;
@@ -15,494 +38,629 @@ interface Unit {
 	order: number;
 }
 
-interface ChallengeRow {
+interface Lesson {
 	id: number;
-	lessonId: number;
-	type: ChallengeType;
-	question: string;
+	unitId: number;
+	title: string;
 	order: number;
 }
 
-function AdminDashboard() {
-	const [stats, setStats] = useState({ subjects: 0, units: 0, lessons: 0, challenges: 0 });
-
-	useEffect(() => {
-		Promise.all([
-			fetch(`${API}/subjects`).then((r) => r.json()) as Promise<unknown[]>,
-			fetch(`${API}/units`).then((r) => r.json()) as Promise<unknown[]>,
-			fetch(`${API}/lessons`).then((r) => r.json()) as Promise<unknown[]>,
-			fetch(`${API}/challenges`).then((r) => r.json()) as Promise<unknown[]>,
-		]).then(([s, u, l, c]) => {
-			setStats({ subjects: s.length, units: u.length, lessons: l.length, challenges: c.length });
-		});
-	}, []);
-
-	const cards = [
-		{ label: "Subjects", count: stats.subjects, color: "bg-duo-green" },
-		{ label: "Units", count: stats.units, color: "bg-duo-blue" },
-		{ label: "Lessons", count: stats.lessons, color: "bg-duo-purple" },
-		{ label: "Challenges", count: stats.challenges, color: "bg-duo-orange" },
-	];
-
-	return (
-		<div>
-			<h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-			<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-				{cards.map((card) => (
-					<div key={card.label} className={cn("rounded-2xl p-6 text-white", card.color)}>
-						<p className="text-3xl font-bold">{card.count}</p>
-						<p className="text-sm opacity-80">{card.label}</p>
-					</div>
-				))}
-			</div>
-		</div>
-	);
+interface SelectedItem {
+	subject: Subject | null;
+	unit: Unit | null;
+	lesson: Lesson | null;
+	challenge: Challenge | null;
 }
 
-// --- Generic CRUD List ---
+type DialogType = "subject" | "unit" | "lesson" | "challenge" | "option";
 
-function useCrud<T extends { id: number }>(endpoint: string) {
-	const [items, setItems] = useState<T[]>([]);
-	const [loading, setLoading] = useState(true);
-
-	const load = useCallback(() => {
-		setLoading(true);
-		fetch(`${API}/${endpoint}`)
-			.then((r) => r.json() as Promise<T[]>)
-			.then(setItems)
-			.finally(() => setLoading(false));
-	}, [endpoint]);
-
-	useEffect(() => { load(); }, [load]);
-
-	const create = async (data: Partial<T>) => {
-		await fetch(`${API}/${endpoint}`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(data),
-		});
-		load();
-	};
-
-	const update = async (id: number, data: Partial<T>) => {
-		await fetch(`${API}/${endpoint}/${id}`, {
-			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(data),
-		});
-		load();
-	};
-
-	const remove = async (id: number) => {
-		await fetch(`${API}/${endpoint}/${id}`, { method: "DELETE" });
-		load();
-	};
-
-	return { items, loading, create, update, remove, reload: load };
+interface FormData {
+	title?: string;
+	description?: string;
+	question?: string;
+	type?: ChallengeType;
+	text?: string;
+	isCorrect?: boolean;
 }
 
-// --- Subjects Manager ---
+export default function AdminPage() {
+	const navigate = useNavigate();
+	const [subjects, setSubjects] = useState<Subject[]>([]);
+	const [units, setUnits] = useState<Unit[]>([]);
+	const [lessons, setLessons] = useState<Lesson[]>([]);
+	const [challenges, setChallenges] = useState<Challenge[]>([]);
+	const [challengeOptions, setChallengeOptions] = useState<ChallengeOption[]>([]);
 
-function SubjectsManager() {
-	const { items, create, update, remove } = useCrud<Subject>("subjects");
-	const [editing, setEditing] = useState<Subject | null>(null);
-	const [form, setForm] = useState({ title: "", description: "", order: 0 });
-	const [showForm, setShowForm] = useState(false);
-
-	const openNew = () => {
-		setEditing(null);
-		setForm({ title: "", description: "", order: items.length });
-		setShowForm(true);
-	};
-
-	const openEdit = (item: Subject) => {
-		setEditing(item);
-		setForm({ title: item.title, description: item.description, order: item.order });
-		setShowForm(true);
-	};
-
-	const handleSubmit = async () => {
-		if (editing) {
-			await update(editing.id, form);
-		} else {
-			await create(form);
-		}
-		setShowForm(false);
-	};
-
-	return (
-		<div>
-			<div className="flex items-center justify-between mb-6">
-				<h1 className="text-2xl font-bold">Subjects</h1>
-				<button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-duo-green text-white font-semibold text-sm">
-					<Plus size={16} /> Add Subject
-				</button>
-			</div>
-
-			{showForm && (
-				<div className="mb-6 p-4 border-2 border-border rounded-2xl bg-muted/30 space-y-3">
-					<input
-						placeholder="Title"
-						value={form.title}
-						onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none"
-					/>
-					<input
-						placeholder="Description"
-						value={form.description}
-						onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none"
-					/>
-					<input
-						type="number"
-						placeholder="Order"
-						value={form.order}
-						onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))}
-						className="w-24 px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none"
-					/>
-					<div className="flex gap-2">
-						<button onClick={handleSubmit} className="px-4 py-2 rounded-xl bg-duo-green text-white text-sm font-semibold">
-							{editing ? "Update" : "Create"}
-						</button>
-						<button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl border-2 border-border text-sm">
-							Cancel
-						</button>
-					</div>
-				</div>
-			)}
-
-			<div className="space-y-2">
-				{items.map((item) => (
-					<div key={item.id} className="flex items-center justify-between p-4 border-2 border-border rounded-xl">
-						<div>
-							<p className="font-semibold">{item.title}</p>
-							<p className="text-sm text-muted-foreground">{item.description}</p>
-						</div>
-						<div className="flex gap-2">
-							<button onClick={() => openEdit(item)} className="p-2 rounded-lg hover:bg-muted"><Pencil size={16} /></button>
-							<button onClick={() => remove(item.id)} className="p-2 rounded-lg hover:bg-duo-red-light text-duo-red"><Trash2 size={16} /></button>
-						</div>
-					</div>
-				))}
-			</div>
-		</div>
-	);
-}
-
-// --- Units Manager ---
-
-function UnitsManager() {
-	const { items, create, update, remove } = useCrud<Unit>("units");
-	const { items: subjects } = useCrud<Subject>("subjects");
-	const [editing, setEditing] = useState<Unit | null>(null);
-	const [form, setForm] = useState({ title: "", description: "", subjectId: 0, order: 0 });
-	const [showForm, setShowForm] = useState(false);
-
-	const openNew = () => {
-		setEditing(null);
-		setForm({ title: "", description: "", subjectId: subjects[0]?.id ?? 0, order: items.length });
-		setShowForm(true);
-	};
-
-	const openEdit = (item: Unit) => {
-		setEditing(item);
-		setForm({ title: item.title, description: item.description, subjectId: item.subjectId, order: item.order });
-		setShowForm(true);
-	};
-
-	const handleSubmit = async () => {
-		if (editing) await update(editing.id, form);
-		else await create(form);
-		setShowForm(false);
-	};
-
-	return (
-		<div>
-			<div className="flex items-center justify-between mb-6">
-				<h1 className="text-2xl font-bold">Units</h1>
-				<button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-duo-green text-white font-semibold text-sm">
-					<Plus size={16} /> Add Unit
-				</button>
-			</div>
-
-			{showForm && (
-				<div className="mb-6 p-4 border-2 border-border rounded-2xl bg-muted/30 space-y-3">
-					<select
-						value={form.subjectId}
-						onChange={(e) => setForm((f) => ({ ...f, subjectId: Number(e.target.value) }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none"
-					>
-						<option value={0}>Select subject...</option>
-						{subjects.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
-					</select>
-					<input placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none" />
-					<input placeholder="Description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none" />
-					<input type="number" placeholder="Order" value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))}
-						className="w-24 px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none" />
-					<div className="flex gap-2">
-						<button onClick={handleSubmit} className="px-4 py-2 rounded-xl bg-duo-green text-white text-sm font-semibold">{editing ? "Update" : "Create"}</button>
-						<button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl border-2 border-border text-sm">Cancel</button>
-					</div>
-				</div>
-			)}
-
-			<div className="space-y-2">
-				{items.map((item) => {
-					const subject = subjects.find((s) => s.id === item.subjectId);
-					return (
-						<div key={item.id} className="flex items-center justify-between p-4 border-2 border-border rounded-xl">
-							<div>
-								<p className="font-semibold">{item.title}</p>
-								<p className="text-sm text-muted-foreground">{subject?.title ?? "Unknown subject"} &middot; {item.description}</p>
-							</div>
-							<div className="flex gap-2">
-								<button onClick={() => openEdit(item)} className="p-2 rounded-lg hover:bg-muted"><Pencil size={16} /></button>
-								<button onClick={() => remove(item.id)} className="p-2 rounded-lg hover:bg-duo-red-light text-duo-red"><Trash2 size={16} /></button>
-							</div>
-						</div>
-					);
-				})}
-			</div>
-		</div>
-	);
-}
-
-// --- Lessons Manager ---
-
-function LessonsManager() {
-	const { items, create, update, remove } = useCrud<Lesson>("lessons");
-	const { items: units } = useCrud<Unit>("units");
-	const [editing, setEditing] = useState<Lesson | null>(null);
-	const [form, setForm] = useState({ title: "", unitId: 0, order: 0 });
-	const [showForm, setShowForm] = useState(false);
-
-	const openNew = () => {
-		setEditing(null);
-		setForm({ title: "", unitId: units[0]?.id ?? 0, order: items.length });
-		setShowForm(true);
-	};
-
-	const openEdit = (item: Lesson) => {
-		setEditing(item);
-		setForm({ title: item.title, unitId: item.unitId, order: item.order });
-		setShowForm(true);
-	};
-
-	const handleSubmit = async () => {
-		if (editing) await update(editing.id, form);
-		else await create(form);
-		setShowForm(false);
-	};
-
-	return (
-		<div>
-			<div className="flex items-center justify-between mb-6">
-				<h1 className="text-2xl font-bold">Lessons</h1>
-				<button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-duo-green text-white font-semibold text-sm">
-					<Plus size={16} /> Add Lesson
-				</button>
-			</div>
-
-			{showForm && (
-				<div className="mb-6 p-4 border-2 border-border rounded-2xl bg-muted/30 space-y-3">
-					<select value={form.unitId} onChange={(e) => setForm((f) => ({ ...f, unitId: Number(e.target.value) }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none">
-						<option value={0}>Select unit...</option>
-						{units.map((u) => <option key={u.id} value={u.id}>{u.title}</option>)}
-					</select>
-					<input placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none" />
-					<input type="number" placeholder="Order" value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: Number(e.target.value) }))}
-						className="w-24 px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none" />
-					<div className="flex gap-2">
-						<button onClick={handleSubmit} className="px-4 py-2 rounded-xl bg-duo-green text-white text-sm font-semibold">{editing ? "Update" : "Create"}</button>
-						<button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl border-2 border-border text-sm">Cancel</button>
-					</div>
-				</div>
-			)}
-
-			<div className="space-y-2">
-				{items.map((item) => {
-					const unit = units.find((u) => u.id === item.unitId);
-					return (
-						<div key={item.id} className="flex items-center justify-between p-4 border-2 border-border rounded-xl">
-							<div>
-								<p className="font-semibold">{item.title}</p>
-								<p className="text-sm text-muted-foreground">{unit?.title ?? "Unknown unit"}</p>
-							</div>
-							<div className="flex gap-2">
-								<button onClick={() => openEdit(item)} className="p-2 rounded-lg hover:bg-muted"><Pencil size={16} /></button>
-								<button onClick={() => remove(item.id)} className="p-2 rounded-lg hover:bg-duo-red-light text-duo-red"><Trash2 size={16} /></button>
-							</div>
-						</div>
-					);
-				})}
-			</div>
-		</div>
-	);
-}
-
-// --- Challenges Manager ---
-
-interface OptionForm {
-	text: string;
-	isCorrect: boolean;
-	order: number;
-}
-
-function ChallengesManager() {
-	const { items, remove } = useCrud<ChallengeRow>("challenges");
-	const { items: lessons } = useCrud<Lesson>("lessons");
-	const [showForm, setShowForm] = useState(false);
-	const [expandedId, setExpandedId] = useState<number | null>(null);
-	const [form, setForm] = useState<{
-		lessonId: number;
-		type: ChallengeType;
-		question: string;
-		order: number;
-		options: OptionForm[];
-	}>({
-		lessonId: 0,
-		type: "TRANSLATE",
-		question: "",
-		order: 0,
-		options: [{ text: "", isCorrect: true, order: 0 }],
+	const [selected, setSelected] = useState<SelectedItem>({
+		subject: null,
+		unit: null,
+		lesson: null,
+		challenge: null,
 	});
 
-	const openNew = () => {
-		setForm({
-			lessonId: lessons[0]?.id ?? 0,
-			type: "TRANSLATE",
-			question: "",
-			order: items.length,
-			options: [{ text: "", isCorrect: true, order: 0 }],
-		});
-		setShowForm(true);
-	};
+	const [dialogOpen, setDialogOpen] = useState(false);
+	const [dialogType, setDialogType] = useState<DialogType | null>(null);
+	const [editingItem, setEditingItem] = useState<Subject | Unit | Lesson | Challenge | ChallengeOption | null>(null);
+	const [formData, setFormData] = useState<FormData>({});
 
-	const handleSubmit = async () => {
-		const { options, ...challengeData } = form;
-		const res = await fetch(`${API}/challenges`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(challengeData),
-		});
-		const created = (await res.json()) as { id: number };
+	const loadSubjects = useCallback(async () => {
+		const data = await getSubjects();
+		setSubjects(data);
+	}, []);
 
-		for (const opt of options) {
-			await fetch(`${API}/challenge-options`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ ...opt, challengeId: created.id }),
-			});
+	// Load subjects on mount
+	useEffect(() => {
+		async function run() {
+			await loadSubjects();
 		}
-		setShowForm(false);
-		window.location.reload();
-	};
+		void run();
+	}, [loadSubjects]);
 
-	const addOption = () => {
-		setForm((f) => ({
-			...f,
-			options: [...f.options, { text: "", isCorrect: false, order: f.options.length }],
-		}));
-	};
+	// Load units when subject is selected
+	useEffect(() => {
+		async function run() {
+			setSelected((s) => ({ ...s, unit: null, lesson: null, challenge: null }));
+			setLessons([]);
+			setChallenges([]);
+			setChallengeOptions([]);
+			if (selected.subject) {
+				setUnits(await getUnits(selected.subject.id));
+			} else {
+				setUnits([]);
+			}
+		}
+		void run();
+	}, [selected.subject]);
+
+	// Load lessons when unit is selected
+	useEffect(() => {
+		async function run() {
+			setSelected((s) => ({ ...s, lesson: null, challenge: null }));
+			setChallenges([]);
+			setChallengeOptions([]);
+			if (selected.unit) {
+				setLessons(await getLessons(selected.unit.id));
+			} else {
+				setLessons([]);
+			}
+		}
+		void run();
+	}, [selected.unit]);
+
+	// Load challenges when lesson is selected
+	useEffect(() => {
+		async function run() {
+			setSelected((s) => ({ ...s, challenge: null }));
+			setChallengeOptions([]);
+			if (selected.lesson) {
+				setChallenges(await getChallenges(selected.lesson.id));
+			} else {
+				setChallenges([]);
+			}
+		}
+		void run();
+	}, [selected.lesson]);
+
+	// Load options when challenge is selected
+	useEffect(() => {
+		async function run() {
+			if (selected.challenge) {
+				setChallengeOptions(await getChallengeOptions(selected.challenge.id));
+			} else {
+				setChallengeOptions([]);
+			}
+		}
+		void run();
+	}, [selected.challenge]);
+
+	function openDialog(type: DialogType, item?: Subject | Unit | Lesson | Challenge | ChallengeOption) {
+		setDialogType(type);
+		setEditingItem(item || null);
+		if (item) {
+			if (type === "subject") {
+				const s = item as Subject;
+				setFormData({ title: s.title, description: s.description });
+			} else if (type === "unit") {
+				const u = item as Unit;
+				setFormData({ title: u.title, description: u.description });
+			} else if (type === "lesson") {
+				const l = item as Lesson;
+				setFormData({ title: l.title });
+			} else if (type === "challenge") {
+				const c = item as Challenge;
+				setFormData({ question: c.question, type: c.type });
+			} else if (type === "option") {
+				const o = item as ChallengeOption;
+				setFormData({ text: o.text, isCorrect: o.isCorrect });
+			}
+		} else {
+			setFormData(getDefaultFormData(type));
+		}
+		setDialogOpen(true);
+	}
+
+	function getDefaultFormData(type: DialogType): FormData {
+		switch (type) {
+			case "subject":
+				return { title: "", description: "" };
+			case "unit":
+				return { title: "", description: "" };
+			case "lesson":
+				return { title: "" };
+			case "challenge":
+				return { question: "", type: "TRANSLATE" };
+			case "option":
+				return { text: "", isCorrect: false };
+			default:
+				return {};
+		}
+	}
+
+	async function handleSave() {
+		if (!dialogType) return;
+
+		try {
+			if (dialogType === "subject") {
+				if (editingItem) {
+					await updateSubject(editingItem.id as number, { title: formData.title!, description: formData.description! });
+				} else {
+					await createSubject({ title: formData.title!, description: formData.description! });
+				}
+				loadSubjects();
+			} else if (dialogType === "unit") {
+				if (editingItem) {
+					await updateUnit(editingItem.id as number, { title: formData.title!, description: formData.description! });
+				} else if (selected.subject) {
+					await createUnit({ subjectId: selected.subject.id, title: formData.title!, description: formData.description! });
+				}
+				if (selected.subject) {
+					getUnits(selected.subject.id).then(setUnits);
+				}
+			} else if (dialogType === "lesson") {
+				if (editingItem) {
+					await updateLesson(editingItem.id as number, { title: formData.title! });
+				} else if (selected.unit) {
+					await createLesson({ unitId: selected.unit.id, title: formData.title! });
+				}
+				if (selected.unit) {
+					getLessons(selected.unit.id).then(setLessons);
+				}
+			} else if (dialogType === "challenge") {
+				if (editingItem) {
+					await updateChallenge(editingItem.id as number, { question: formData.question!, type: formData.type! });
+				} else if (selected.lesson) {
+					await createChallenge({ lessonId: selected.lesson.id, question: formData.question!, type: formData.type! });
+				}
+				if (selected.lesson) {
+					getChallenges(selected.lesson.id).then(setChallenges);
+				}
+			} else if (dialogType === "option") {
+				if (editingItem) {
+					await updateChallengeOption(editingItem.id as number, { text: formData.text!, isCorrect: formData.isCorrect! });
+				} else if (selected.challenge) {
+					await createChallengeOption({ challengeId: selected.challenge.id, text: formData.text!, isCorrect: formData.isCorrect! });
+				}
+				if (selected.challenge) {
+					getChallengeOptions(selected.challenge.id).then(setChallengeOptions);
+				}
+			}
+			setDialogOpen(false);
+		} catch (error) {
+			console.error("Error saving:", error);
+		}
+	}
+
+	async function handleDelete(type: DialogType, id: number) {
+		if (!confirm("Are you sure you want to delete this item?")) return;
+
+		try {
+			if (type === "subject") {
+				await deleteSubject(id);
+				loadSubjects();
+				setSelected((s) => ({ ...s, subject: null }));
+			} else if (type === "unit") {
+				await deleteUnit(id);
+				if (selected.subject) {
+					getUnits(selected.subject.id).then(setUnits);
+				}
+				setSelected((s) => ({ ...s, unit: null }));
+			} else if (type === "lesson") {
+				await deleteLesson(id);
+				if (selected.unit) {
+					getLessons(selected.unit.id).then(setLessons);
+				}
+				setSelected((s) => ({ ...s, lesson: null }));
+			} else if (type === "challenge") {
+				await deleteChallenge(id);
+				if (selected.lesson) {
+					getChallenges(selected.lesson.id).then(setChallenges);
+				}
+				setSelected((s) => ({ ...s, challenge: null }));
+			} else if (type === "option") {
+				await deleteChallengeOption(id);
+				if (selected.challenge) {
+					getChallengeOptions(selected.challenge.id).then(setChallengeOptions);
+				}
+			}
+		} catch (error) {
+			console.error("Error deleting:", error);
+		}
+	}
+
+	async function handleReorderSubjects(fromIndex: number, toIndex: number) {
+		const newOrder = [...subjects];
+		const [moved] = newOrder.splice(fromIndex, 1);
+		newOrder.splice(toIndex, 0, moved);
+		// Update order values
+		await Promise.all(newOrder.map((item, index) => updateSubject(item.id, { order: index })));
+		loadSubjects();
+	}
+
+	async function handleReorderUnits(fromIndex: number, toIndex: number) {
+		const newOrder = [...units];
+		const [moved] = newOrder.splice(fromIndex, 1);
+		newOrder.splice(toIndex, 0, moved);
+		await Promise.all(newOrder.map((item, index) => updateUnit(item.id, { order: index })));
+		if (selected.subject) {
+			getUnits(selected.subject.id).then(setUnits);
+		}
+	}
+
+	async function handleReorderLessons(fromIndex: number, toIndex: number) {
+		const newOrder = [...lessons];
+		const [moved] = newOrder.splice(fromIndex, 1);
+		newOrder.splice(toIndex, 0, moved);
+		await Promise.all(newOrder.map((item, index) => updateLesson(item.id, { order: index })));
+		if (selected.unit) {
+			getLessons(selected.unit.id).then(setLessons);
+		}
+	}
+
+	async function handleReorderChallenges(fromIndex: number, toIndex: number) {
+		const newOrder = [...challenges];
+		const [moved] = newOrder.splice(fromIndex, 1);
+		newOrder.splice(toIndex, 0, moved);
+		await Promise.all(newOrder.map((item, index) => updateChallenge(item.id, { order: index })));
+		if (selected.lesson) {
+			getChallenges(selected.lesson.id).then(setChallenges);
+		}
+	}
+
+	async function handleReorderOptions(fromIndex: number, toIndex: number) {
+		const newOrder = [...challengeOptions];
+		const [moved] = newOrder.splice(fromIndex, 1);
+		newOrder.splice(toIndex, 0, moved);
+		await Promise.all(newOrder.map((item, index) => updateChallengeOption(item.id, { order: index })));
+		if (selected.challenge) {
+			getChallengeOptions(selected.challenge.id).then(setChallengeOptions);
+		}
+	}
+
+	const challengeTypes: ChallengeType[] = ["TRANSLATE", "FILL_BLANK", "MATCH_PAIRS", "SELECT_TRANSLATION"];
 
 	return (
-		<div>
-			<div className="flex items-center justify-between mb-6">
-				<h1 className="text-2xl font-bold">Challenges</h1>
-				<button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-duo-green text-white font-semibold text-sm">
-					<Plus size={16} /> Add Challenge
-				</button>
-			</div>
+		<div className="min-h-screen bg-background">
+			{/* Header */}
+			<header className="border-b bg-white px-4 py-3 flex items-center gap-4">
+				<Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+					<ChevronLeft className="h-5 w-5" />
+				</Button>
+				<h1 className="text-xl font-semibold flex items-center gap-2">
+					<Settings2 className="h-5 w-5" />
+					Admin Panel
+				</h1>
+			</header>
 
-			{showForm && (
-				<div className="mb-6 p-4 border-2 border-border rounded-2xl bg-muted/30 space-y-3">
-					<select value={form.lessonId} onChange={(e) => setForm((f) => ({ ...f, lessonId: Number(e.target.value) }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none">
-						<option value={0}>Select lesson...</option>
-						{lessons.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
-					</select>
-					<select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as ChallengeType }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none">
-						<option value="TRANSLATE">Translate</option>
-						<option value="FILL_BLANK">Fill in the blank</option>
-						<option value="MATCH_PAIRS">Match pairs</option>
-						<option value="SELECT_TRANSLATION">Select translation</option>
-					</select>
-					<input placeholder="Question" value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))}
-						className="w-full px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none" />
-
-					<div className="space-y-2">
-						<p className="text-sm font-semibold">Options:</p>
-						{form.options.map((opt, i) => (
-							<div key={i} className="flex gap-2 items-center">
-								<input placeholder={`Option ${i + 1}`} value={opt.text}
-									onChange={(e) => {
-										const opts = [...form.options];
-										opts[i] = { ...opts[i], text: e.target.value };
-										setForm((f) => ({ ...f, options: opts }));
-									}}
-									className="flex-1 px-3 py-2 rounded-xl border-2 border-border text-sm focus:border-duo-green focus:outline-none" />
-								<label className="flex items-center gap-1 text-sm whitespace-nowrap">
-									<input type="checkbox" checked={opt.isCorrect}
-										onChange={(e) => {
-											const opts = [...form.options];
-											opts[i] = { ...opts[i], isCorrect: e.target.checked };
-											setForm((f) => ({ ...f, options: opts }));
-										}} />
-									Correct
-								</label>
-							</div>
-						))}
-						<button onClick={addOption} className="text-sm text-duo-blue font-semibold">+ Add option</button>
-					</div>
-
-					<div className="flex gap-2">
-						<button onClick={handleSubmit} className="px-4 py-2 rounded-xl bg-duo-green text-white text-sm font-semibold">Create</button>
-						<button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl border-2 border-border text-sm">Cancel</button>
-					</div>
-				</div>
-			)}
-
-			<div className="space-y-2">
-				{items.map((item) => {
-					const lesson = lessons.find((l) => l.id === item.lessonId);
-					const isExpanded = expandedId === item.id;
-					return (
-						<div key={item.id} className="border-2 border-border rounded-xl">
-							<div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : item.id)}>
-								<div className="flex items-center gap-2">
-									{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-									<div>
-										<p className="font-semibold">{item.question}</p>
-										<p className="text-sm text-muted-foreground">{item.type} &middot; {lesson?.title ?? "Unknown"}</p>
-									</div>
-								</div>
-								<button onClick={(e) => { e.stopPropagation(); remove(item.id); }} className="p-2 rounded-lg hover:bg-duo-red-light text-duo-red">
-									<Trash2 size={16} />
-								</button>
-							</div>
+			{/* 5 Column Layout */}
+			<div className="flex h-[calc(100vh-64px)] overflow-hidden">
+				{/* Column 1: Subjects */}
+				<Column
+					title="Subjects"
+					items={subjects}
+					selectedId={selected.subject?.id ?? null}
+					onSelect={(item) => setSelected((s) => ({ ...s, subject: item as Subject }))}
+					onAdd={() => openDialog("subject")}
+					onEdit={(item) => openDialog("subject", item)}
+					onDelete={(item) => handleDelete("subject", item.id)}
+					onReorder={handleReorderSubjects}
+					renderItem={(item) => (
+						<div>
+							<div className="font-medium">{item.title}</div>
+							<div className="text-sm text-muted-foreground truncate">{item.description}</div>
 						</div>
-					);
-				})}
+					)}
+				/>
+
+				{/* Column 2: Units */}
+				<Column
+					title="Units"
+					items={units}
+					selectedId={selected.unit?.id ?? null}
+					onSelect={(item) => setSelected((s) => ({ ...s, unit: item as Unit }))}
+					onAdd={() => selected.subject && openDialog("unit")}
+					onEdit={(item) => openDialog("unit", item)}
+					onDelete={(item) => handleDelete("unit", item.id)}
+					onReorder={handleReorderUnits}
+					disabled={!selected.subject}
+					renderItem={(item) => (
+						<div>
+							<div className="font-medium">{item.title}</div>
+							<div className="text-sm text-muted-foreground truncate">{item.description}</div>
+						</div>
+					)}
+				/>
+
+				{/* Column 3: Lessons */}
+				<Column
+					title="Lessons"
+					items={lessons}
+					selectedId={selected.lesson?.id ?? null}
+					onSelect={(item) => setSelected((s) => ({ ...s, lesson: item as Lesson }))}
+					onAdd={() => selected.unit && openDialog("lesson")}
+					onEdit={(item) => openDialog("lesson", item)}
+					onDelete={(item) => handleDelete("lesson", item.id)}
+					onReorder={handleReorderLessons}
+					disabled={!selected.unit}
+					renderItem={(item) => (
+						<div className="font-medium">{item.title}</div>
+					)}
+				/>
+
+				{/* Column 4: Challenges */}
+				<Column
+					title="Challenges"
+					items={challenges}
+					selectedId={selected.challenge?.id ?? null}
+					onSelect={(item) => setSelected((s) => ({ ...s, challenge: item as Challenge }))}
+					onAdd={() => selected.lesson && openDialog("challenge")}
+					onEdit={(item) => openDialog("challenge", item)}
+					onDelete={(item) => handleDelete("challenge", item.id)}
+					onReorder={handleReorderChallenges}
+					disabled={!selected.lesson}
+					renderItem={(item) => (
+						<div>
+							<Badge variant="outline" className="mb-1 text-xs">{item.type}</Badge>
+							<div className="text-sm font-medium truncate">{item.question}</div>
+						</div>
+					)}
+				/>
+
+				{/* Column 5: Options */}
+				<Column
+					title="Options"
+					items={challengeOptions}
+					selectedId={null}
+					onSelect={() => {}}
+					onAdd={() => selected.challenge && openDialog("option")}
+					onEdit={(item) => openDialog("option", item)}
+					onDelete={(item) => handleDelete("option", item.id)}
+					onReorder={handleReorderOptions}
+					disabled={!selected.challenge}
+					renderItem={(item) => (
+						<div className="flex items-center gap-2">
+							<Badge variant={item.isCorrect ? "default" : "secondary"} className="text-xs">
+								{item.isCorrect ? "Correct" : "Wrong"}
+							</Badge>
+							<span className="truncate">{item.text}</span>
+						</div>
+					)}
+				/>
 			</div>
+
+			{/* Edit Dialog */}
+			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>
+							{editingItem ? "Edit" : "Add"} {dialogType?.charAt(0).toUpperCase()}{dialogType?.slice(1)}
+						</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-4 py-4">
+						{dialogType === "subject" && (
+							<>
+								<div className="space-y-2">
+									<label className="text-sm font-medium">Title</label>
+									<Input
+										value={formData.title || ""}
+										onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+										placeholder="Subject title"
+									/>
+								</div>
+								<div className="space-y-2">
+									<label className="text-sm font-medium">Description</label>
+									<Input
+										value={formData.description || ""}
+										onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+										placeholder="Subject description"
+									/>
+								</div>
+							</>
+						)}
+						{dialogType === "unit" && (
+							<>
+								<div className="space-y-2">
+									<label className="text-sm font-medium">Title</label>
+									<Input
+										value={formData.title || ""}
+										onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+										placeholder="Unit title"
+									/>
+								</div>
+								<div className="space-y-2">
+									<label className="text-sm font-medium">Description</label>
+									<Input
+										value={formData.description || ""}
+										onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+										placeholder="Unit description"
+									/>
+								</div>
+							</>
+						)}
+						{dialogType === "lesson" && (
+							<div className="space-y-2">
+								<label className="text-sm font-medium">Title</label>
+								<Input
+									value={formData.title || ""}
+									onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+									placeholder="Lesson title"
+								/>
+							</div>
+						)}
+						{dialogType === "challenge" && (
+							<>
+								<div className="space-y-2">
+									<label className="text-sm font-medium">Type</label>
+									<select
+										className="w-full px-3 py-2 border rounded-md bg-background"
+										value={formData.type || "TRANSLATE"}
+										onChange={(e) => setFormData({ ...formData, type: e.target.value as ChallengeType })}
+									>
+										{challengeTypes.map((type) => (
+											<option key={type} value={type}>{type}</option>
+										))}
+									</select>
+								</div>
+								<div className="space-y-2">
+									<label className="text-sm font-medium">Question</label>
+									<Input
+										value={formData.question || ""}
+										onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+										placeholder="Challenge question"
+									/>
+								</div>
+							</>
+						)}
+						{dialogType === "option" && (
+							<>
+								<div className="space-y-2">
+									<label className="text-sm font-medium">Text</label>
+									<Input
+										value={formData.text || ""}
+										onChange={(e) => setFormData({ ...formData, text: e.target.value })}
+										placeholder="Option text"
+									/>
+								</div>
+								<div className="flex items-center gap-2">
+									<input
+										type="checkbox"
+										id="isCorrect"
+										checked={formData.isCorrect || false}
+										onChange={(e) => setFormData({ ...formData, isCorrect: e.target.checked })}
+									/>
+									<label htmlFor="isCorrect" className="text-sm font-medium">Correct answer</label>
+								</div>
+							</>
+						)}
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+						<Button onClick={handleSave}>Save</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
 
-export function AdminPage() {
+interface ColumnProps<T> {
+	title: string;
+	items: T[];
+	selectedId: number | null;
+	onSelect: (item: T) => void;
+	onAdd: () => void;
+	onEdit: (item: T) => void;
+	onDelete: (item: T) => void;
+	onReorder?: (fromIndex: number, toIndex: number) => void;
+	disabled?: boolean;
+	renderItem: (item: T) => React.ReactNode;
+}
+
+function Column<T extends { id: number }>({ title, items, selectedId, onSelect, onAdd, onEdit, onDelete, onReorder, disabled, renderItem }: ColumnProps<T>) {
+	const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+	function handleDragStart(e: React.DragEvent, index: number) {
+		setDraggedIndex(index);
+		e.dataTransfer.effectAllowed = "move";
+	}
+
+	function handleDragOver(e: React.DragEvent) {
+		e.preventDefault();
+		e.dataTransfer.dropEffect = "move";
+	}
+
+	function handleDrop(e: React.DragEvent, _toIndex: number) {
+		e.preventDefault();
+		if (draggedIndex !== null && onReorder) {
+			onReorder(draggedIndex, _toIndex);
+		}
+		setDraggedIndex(null);
+	}
+
+	function handleDragEnd() {
+		setDraggedIndex(null);
+	}
+
 	return (
-		<AdminShell>
-			<Routes>
-				<Route index element={<AdminDashboard />} />
-				<Route path="subjects" element={<SubjectsManager />} />
-				<Route path="units" element={<UnitsManager />} />
-				<Route path="lessons" element={<LessonsManager />} />
-				<Route path="challenges" element={<ChallengesManager />} />
-			</Routes>
-		</AdminShell>
+		<div className="flex-1 min-w-[200px] border-r flex flex-col">
+			<div className="p-3 border-b bg-gray-50 flex items-center justify-between">
+				<h2 className="font-semibold text-sm">{title}</h2>
+				<Button
+					variant="ghost"
+					size="icon"
+					className="h-7 w-7"
+					onClick={onAdd}
+					disabled={disabled}
+				>
+					<Plus className="h-4 w-4" />
+				</Button>
+			</div>
+			<ScrollArea className="flex-1 min-h-0 overflow-hidden">
+				<div className="p-2 space-y-1">
+					{items.length === 0 ? (
+						<div className="text-center py-8 text-muted-foreground text-sm">
+							{disabled ? "Select an item above" : "No items"}
+						</div>
+					) : (
+						items.map((item, index) => (
+							<div
+								key={item.id}
+								draggable={!!onReorder}
+								onDragStart={(e) => handleDragStart(e, index)}
+								onDragOver={(e) => handleDragOver(e)}
+								onDrop={(e) => handleDrop(e, index)}
+								onDragEnd={handleDragEnd}
+								className={`
+									group flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors
+									${selectedId === item.id ? "bg-primary/10 border border-primary" : "hover:bg-gray-100 border border-transparent"}
+									${draggedIndex === index ? "opacity-50" : ""}
+								`}
+								onClick={() => onSelect(item)}
+							>
+								<GripVertical className={`h-4 w-4 text-muted-foreground ${onReorder ? "opacity-50 cursor-grab" : "opacity-0"} group-hover:opacity-100`} />
+								<div className="flex-1 min-w-0">{renderItem(item)}</div>
+								<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+									<Button
+										variant="ghost"
+										size="icon"
+										className="h-6 w-6"
+										onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+									>
+										<Pencil className="h-3 w-3" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="h-6 w-6 text-destructive"
+										onClick={(e) => { e.stopPropagation(); onDelete(item); }}
+									>
+										<Trash2 className="h-3 w-3" />
+									</Button>
+								</div>
+							</div>
+						))
+					)}
+				</div>
+			</ScrollArea>
+		</div>
 	);
 }

@@ -8,6 +8,14 @@
 	--color-border: #e2e8f0;
 	--color-ring: #58cc02;
 
+	--color-primary: #58cc02;
+	--color-primary-foreground: #ffffff;
+	--color-secondary: #e2e8f0;
+	--color-secondary-foreground: #1a1a2e;
+	--color-destructive: #ff4b4b;
+	--color-destructive-foreground: #ffffff;
+	--color-input: #e2e8f0;
+
 	--color-duo-green: #58cc02;
 	--color-duo-green-dark: #46a302;
 	--color-duo-green-light: #d7ffb8;
