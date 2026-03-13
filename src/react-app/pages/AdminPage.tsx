@@ -366,7 +366,7 @@ export default function AdminPage() {
 					renderItem={(item) => (
 						<div>
 							<div className="font-medium">{item.title}</div>
-							<div className="text-sm text-muted-foreground truncate">{item.description}</div>
+							<div className="text-sm text-muted-foreground">{item.description}</div>
 						</div>
 					)}
 				/>
@@ -385,7 +385,7 @@ export default function AdminPage() {
 					renderItem={(item) => (
 						<div>
 							<div className="font-medium">{item.title}</div>
-							<div className="text-sm text-muted-foreground truncate">{item.description}</div>
+							<div className="text-sm text-muted-foreground">{item.description}</div>
 						</div>
 					)}
 				/>
@@ -420,7 +420,7 @@ export default function AdminPage() {
 					renderItem={(item) => (
 						<div>
 							<Badge variant="outline" className="mb-1 text-xs">{item.type}</Badge>
-							<div className="text-sm font-medium truncate">{item.question}</div>
+							<div className="text-sm font-medium">{item.question}</div>
 						</div>
 					)}
 				/>
@@ -615,7 +615,7 @@ function Column<T extends { id: number }>({ title, items, selectedId, onSelect, 
 				</Button>
 			</div>
 			<ScrollArea className="flex-1 min-h-0 overflow-hidden">
-				<div className="p-2 space-y-1">
+				<div className="flex flex-col p-2 space-y-1">
 					{items.length === 0 ? (
 						<div className="text-center py-8 text-muted-foreground text-sm">
 							{disabled ? "Select an item above" : "No items"}
