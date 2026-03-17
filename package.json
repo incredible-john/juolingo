@@ -12,6 +12,8 @@
 		"publish": true
 	},
 	"dependencies": {
+		"@clerk/localizations": "^4.2.1",
+		"@clerk/react": "^6.1.0",
 		"@elevenlabs/elevenlabs-js": "^2.38.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
@@ -19,8 +21,8 @@
 		"hono": "4.11.1",
 		"lucide-react": "^0.577.0",
 		"radix-ui": "^1.4.3",
-		"react": "19.2.1",
-		"react-dom": "19.2.1",
+		"react": "^19.2.3",
+		"react-dom": "^19.2.3",
 		"react-router": "^7.13.1",
 		"tailwind-merge": "^3.5.0"
 	},

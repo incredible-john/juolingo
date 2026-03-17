@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { BookOpen, Sparkles, Globe, Newspaper } from "lucide-react";
+import { BookOpen, Sparkles, Globe, Newspaper, Loader } from "lucide-react";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { getSubjects } from "@/lib/api";
 import type { Subject } from "@/lib/types";
+import { ClerkLoaded, ClerkLoading, Show, SignInButton, useUser } from "@clerk/react";
+import { UserButton } from "@clerk/react";
+import { Button } from "@/components/ui/button";
 
 const iconMap: Record<string, typeof BookOpen> = {
 	biography: Sparkles,
@@ -19,13 +22,41 @@ const colorMap: string[] = [
 	"from-duo-orange to-amber-400",
 ];
 
+function SignedInUser() {
+	const { user } = useUser();
+	const displayName =
+		user?.username ??
+		user?.primaryEmailAddress?.emailAddress ??
+		"未知用户";
+	return (
+		<div className="flex items-center gap-2">
+			<span className="text-sm font-medium text-foreground truncate max-w-[120px] sm:max-w-[160px]" title={displayName}>
+				{displayName}
+			</span>
+			<UserButton />
+		</div>
+	);
+}
+
 function SubjectsPageHeader() {
 	return (
-		<header className="px-4 pt-8 pb-4 sm:px-6">
+		<header className="px-4 pt-8 pb-4 sm:px-6 flex items-center justify-between">
 			<h1 className="text-3xl font-extrabold text-foreground">
-				Juolingo
+				中邻国
 			</h1>
-			<p className="text-muted-foreground mt-1">Choose a topic to start learning</p>
+			<ClerkLoading>
+				<Loader className="h-5 w-5 text-muted-foreground animate-spin" />
+			</ClerkLoading>
+			<ClerkLoaded>
+				<Show when="signed-out">
+					<SignInButton mode="modal">
+						<Button variant="outline">登录</Button>
+					</SignInButton>
+				</Show>
+				<Show when="signed-in">
+					<SignedInUser />
+				</Show>
+			</ClerkLoaded>
 		</header>
 	);
 }
