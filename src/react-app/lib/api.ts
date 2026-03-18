@@ -2,116 +2,145 @@ import type { Subject, UnitWithLessons, LessonWithChallenges, Challenge, Challen
 
 const BASE = "/api";
 
-async function fetchJson<T>(url: string): Promise<T> {
-	const res = await fetch(url);
-	if (!res.ok) throw new Error(`API error: ${res.status}`);
-	return res.json() as Promise<T>;
+type GetToken = () => Promise<string | null>;
+
+let _getToken: GetToken | null = null;
+
+export function setGetToken(fn: GetToken) {
+	_getToken = fn;
 }
 
-async function fetchJsonWithMethod<T>(url: string, method: string, body?: unknown): Promise<T> {
+type FetchApiOptions = {
+	method?: string;
+	body?: unknown;
+};
+
+async function fetchApi<T>(url: string, options?: FetchApiOptions): Promise<T> {
+	const method = options?.method ?? "GET";
+	const headers: Record<string, string> = {};
+	if (method !== "GET" && method !== "HEAD") {
+		headers["Content-Type"] = "application/json";
+	}
+	if (_getToken) {
+		const token = await _getToken();
+		if (token) headers["Authorization"] = `Bearer ${token}`;
+	}
+
+	const body = options?.body;
 	const res = await fetch(url, {
 		method,
-		headers: { "Content-Type": "application/json" },
-		body: body ? JSON.stringify(body) : undefined,
+		headers,
+		body: body !== undefined ? JSON.stringify(body) : undefined,
 	});
 	if (!res.ok) throw new Error(`API error: ${res.status}`);
 	return res.json() as Promise<T>;
 }
 
 export function getSubjects() {
-	return fetchJson<Subject[]>(`${BASE}/subjects`);
+	return fetchApi<Subject[]>(`${BASE}/subjects`);
 }
 
 export function getUnitsForSubject(subjectId: number) {
-	return fetchJson<UnitWithLessons[]>(`${BASE}/subjects/${subjectId}/units`);
+	return fetchApi<UnitWithLessons[]>(`${BASE}/subjects/${subjectId}/units`);
 }
 
 export function getLesson(lessonId: number) {
-	return fetchJson<LessonWithChallenges>(`${BASE}/lessons/${lessonId}`);
+	return fetchApi<LessonWithChallenges>(`${BASE}/lessons/${lessonId}`);
+}
+
+/** 将某道 challenge 标记为已完成（未登录则静默跳过） */
+export async function markChallengeComplete(challengeId: number): Promise<void> {
+	if (!_getToken) return;
+	const token = await _getToken();
+	if (!token) return;
+	await fetchApi<{ ok: boolean; challengeId: number }>(
+		`${BASE}/progress/challenges/${challengeId}/complete`,
+		{ method: "POST" },
+	);
 }
 
 // Admin API functions
 
 export function getUnits(subjectId?: number) {
 	const url = subjectId ? `${BASE}/admin/units?subjectId=${subjectId}` : `${BASE}/admin/units`;
-	return fetchJson<{ id: number; subjectId: number; title: string; description: string; order: number }[]>(url);
+	return fetchApi<{ id: number; subjectId: number; title: string; description: string; order: number }[]>(url);
 }
 
 export function getLessons(unitId?: number) {
 	const url = unitId ? `${BASE}/admin/lessons?unitId=${unitId}` : `${BASE}/admin/lessons`;
-	return fetchJson<{ id: number; unitId: number; title: string; order: number }[]>(url);
+	return fetchApi<{ id: number; unitId: number; title: string; order: number }[]>(url);
 }
 
 export function getChallenges(lessonId?: number) {
 	const url = lessonId ? `${BASE}/admin/challenges?lessonId=${lessonId}` : `${BASE}/admin/challenges`;
-	return fetchJson<Challenge[]>(url);
+	return fetchApi<Challenge[]>(url);
 }
 
 export function getChallengeOptions(challengeId: number) {
-	return fetchJson<ChallengeOption[]>(`${BASE}/admin/challenge-options?challengeId=${challengeId}`);
+	return fetchApi<ChallengeOption[]>(`${BASE}/admin/challenge-options?challengeId=${challengeId}`);
 }
 
 // Subject CRUD
 export function createSubject(data: { title: string; description: string }) {
-	return fetchJsonWithMethod<Subject>(`${BASE}/admin/subjects`, "POST", data);
+	return fetchApi<Subject>(`${BASE}/admin/subjects`, { method: "POST", body: data });
 }
 
 export function updateSubject(id: number, data: { title?: string; description?: string; order?: number }) {
-	return fetchJsonWithMethod<Subject>(`${BASE}/admin/subjects/${id}`, "PUT", data);
+	return fetchApi<Subject>(`${BASE}/admin/subjects/${id}`, { method: "PUT", body: data });
 }
 
 export function deleteSubject(id: number) {
-	return fetchJsonWithMethod<{ success: boolean }>(`${BASE}/admin/subjects/${id}`, "DELETE");
+	return fetchApi<{ success: boolean }>(`${BASE}/admin/subjects/${id}`, { method: "DELETE" });
 }
 
 // Unit CRUD
 export function createUnit(data: { subjectId: number; title: string; description: string }) {
-	return fetchJsonWithMethod<{ id: number; subjectId: number; title: string; description: string; order: number }>(`${BASE}/admin/units`, "POST", data);
+	return fetchApi<{ id: number; subjectId: number; title: string; description: string; order: number }>(`${BASE}/admin/units`, { method: "POST", body: data });
 }
 
 export function updateUnit(id: number, data: { title?: string; description?: string; order?: number }) {
-	return fetchJsonWithMethod<{ id: number; subjectId: number; title: string; description: string; order: number }>(`${BASE}/admin/units/${id}`, "PUT", data);
+	return fetchApi<{ id: number; subjectId: number; title: string; description: string; order: number }>(`${BASE}/admin/units/${id}`, { method: "PUT", body: data });
 }
 
 export function deleteUnit(id: number) {
-	return fetchJsonWithMethod<{ success: boolean }>(`${BASE}/admin/units/${id}`, "DELETE");
+	return fetchApi<{ success: boolean }>(`${BASE}/admin/units/${id}`, { method: "DELETE" });
 }
 
 // Lesson CRUD
 export function createLesson(data: { unitId: number; title: string }) {
-	return fetchJsonWithMethod<{ id: number; unitId: number; title: string; order: number }>(`${BASE}/admin/lessons`, "POST", data);
+	return fetchApi<{ id: number; unitId: number; title: string; order: number }>(`${BASE}/admin/lessons`, { method: "POST", body: data });
 }
 
 export function updateLesson(id: number, data: { title?: string; order?: number }) {
-	return fetchJsonWithMethod<{ id: number; unitId: number; title: string; order: number }>(`${BASE}/admin/lessons/${id}`, "PUT", data);
+	return fetchApi<{ id: number; unitId: number; title: string; order: number }>(`${BASE}/admin/lessons/${id}`, { method: "PUT", body: data });
 }
 
 export function deleteLesson(id: number) {
-	return fetchJsonWithMethod<{ success: boolean }>(`${BASE}/admin/lessons/${id}`, "DELETE");
+	return fetchApi<{ success: boolean }>(`${BASE}/admin/lessons/${id}`, { method: "DELETE" });
 }
 
 // Challenge CRUD
 export function createChallenge(data: { lessonId: number; type: string; question: string }) {
-	return fetchJsonWithMethod<Challenge>(`${BASE}/admin/challenges`, "POST", data);
+	return fetchApi<Challenge>(`${BASE}/admin/challenges`, { method: "POST", body: data });
 }
 
 export function updateChallenge(id: number, data: { question?: string; type?: string; order?: number }) {
-	return fetchJsonWithMethod<Challenge>(`${BASE}/admin/challenges/${id}`, "PUT", data);
+	return fetchApi<Challenge>(`${BASE}/admin/challenges/${id}`, { method: "PUT", body: data });
 }
 
 export function deleteChallenge(id: number) {
-	return fetchJsonWithMethod<{ success: boolean }>(`${BASE}/admin/challenges/${id}`, "DELETE");
+	return fetchApi<{ success: boolean }>(`${BASE}/admin/challenges/${id}`, { method: "DELETE" });
 }
 
 // Challenge Option CRUD
 export function createChallengeOption(data: { challengeId: number; text: string; isCorrect: boolean }) {
-	return fetchJsonWithMethod<ChallengeOption>(`${BASE}/admin/challenge-options`, "POST", data);
+	return fetchApi<ChallengeOption>(`${BASE}/admin/challenge-options`, { method: "POST", body: data });
 }
 
 export function updateChallengeOption(id: number, data: { text?: string; isCorrect?: boolean; order?: number }) {
-	return fetchJsonWithMethod<ChallengeOption>(`${BASE}/admin/challenge-options/${id}`, "PUT", data);
+	return fetchApi<ChallengeOption>(`${BASE}/admin/challenge-options/${id}`, { method: "PUT", body: data });
 }
 
 export function deleteChallengeOption(id: number) {
-	return fetchJsonWithMethod<{ success: boolean }>(`${BASE}/admin/challenge-options/${id}`, "DELETE");
+	return fetchApi<{ success: boolean }>(`${BASE}/admin/challenge-options/${id}`, { method: "DELETE" });
 }

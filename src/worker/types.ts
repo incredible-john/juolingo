@@ -4,4 +4,9 @@ export interface AppEnv {
 	ELEVENLABS_API_KEY: string;
 	BAIDU_APP_ID: string;
 	BAIDU_APP_KEY: string;
+	CLERK_SECRET_KEY: string;
 }
+
+export type AppVariables = {
+	userId: string | null;
+};

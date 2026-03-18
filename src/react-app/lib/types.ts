@@ -22,6 +22,8 @@ export interface Lesson {
 	title: string;
 	order: number;
 	createdAt: string;
+	/** 登录后由 /subjects/:id/units 返回：该课下所有 challenge 均已完成 */
+	completed?: boolean;
 }
 
 export interface UnitWithLessons extends Unit {

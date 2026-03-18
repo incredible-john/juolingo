@@ -1,10 +1,19 @@
+import { useEffect } from "react";
+import { useAuth } from "@clerk/react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { SubjectsPage } from "./pages/SubjectsPage";
 import { UnitsPage } from "./pages/UnitsPage";
 import { LearnPage } from "./pages/LearnPage";
 import AdminPage from "./pages/AdminPage";
+import { setGetToken } from "./lib/api";
 
 export default function App() {
+	const { getToken } = useAuth();
+
+	useEffect(() => {
+		setGetToken(getToken);
+	}, [getToken]);
+
 	return (
 		<BrowserRouter>
 			<Routes>

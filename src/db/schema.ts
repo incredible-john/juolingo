@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 
 export const subjects = sqliteTable("subjects", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
@@ -11,6 +12,10 @@ export const subjects = sqliteTable("subjects", {
 		.notNull()
 		.default(sql`(current_timestamp)`),
 });
+
+export const subjectsRelations = relations(subjects, ({ many }) => ({
+	units: many(units),
+}));
 
 export const units = sqliteTable("units", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
@@ -25,6 +30,14 @@ export const units = sqliteTable("units", {
 		.default(sql`(current_timestamp)`),
 });
 
+export const unitsRelations = relations(units, ({ one, many }) => ({
+	subject: one(subjects, {
+		fields: [units.subjectId],
+		references: [subjects.id],
+	}),
+	lessons: many(lessons),
+}));
+
 export const lessons = sqliteTable("lessons", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
 	unitId: integer("unit_id")
@@ -36,6 +49,14 @@ export const lessons = sqliteTable("lessons", {
 		.notNull()
 		.default(sql`(current_timestamp)`),
 });
+
+export const lessonsRelations = relations(lessons, ({ one, many }) => ({
+	unit: one(units, {
+		fields: [lessons.unitId],
+		references: [units.id],
+	}),
+	challenges: many(challenges),
+}));
 
 export type ChallengeType =
 	| "TRANSLATE"
@@ -56,6 +77,32 @@ export const challenges = sqliteTable("challenges", {
 		.notNull()
 		.default(sql`(current_timestamp)`),
 });
+
+export const challengeProgress = sqliteTable("challenge_progress", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	userId: text("user_id").notNull(),
+	challengeId: integer("challenge_id")
+		.references(() => challenges.id, { onDelete: "cascade" })
+		.notNull(),
+	completed: integer("completed", { mode: "boolean" }).notNull().default(false),
+});
+
+export const challengesRelations = relations(challenges, ({ one, many }) => ({
+	lesson: one(lessons, {
+		fields: [challenges.lessonId],
+		references: [lessons.id],
+	}),
+	options: many(challengeOptions),
+	tokens: many(challengeTokens),
+	challengeProgress: many(challengeProgress),
+}));
+
+export const challengeProgressRelations = relations(challengeProgress, ({ one }) => ({
+	challenge: one(challenges, {
+		fields: [challengeProgress.challengeId],
+		references: [challenges.id],
+	}),
+}));
 
 export const challengeOptions = sqliteTable("challenge_options", {
 	id: integer("id").primaryKey({ autoIncrement: true }),

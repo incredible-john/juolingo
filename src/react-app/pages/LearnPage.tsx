@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
-import { getLesson } from "@/lib/api";
+import { getLesson, markChallengeComplete } from "@/lib/api";
 import type { Challenge, LessonWithChallenges } from "@/lib/types";
 import { ChallengeHeader } from "@/components/learn/challenges/ChallengeHeader";
 import { FeedbackBanner } from "@/components/learn/challenges/FeedbackBanner";
@@ -87,6 +87,9 @@ export function LearnPage() {
 			setAnswered(true);
 			if (correct) {
 				playCorrectSound();
+				void markChallengeComplete(current.id).catch(() => {
+					// 网络/未迁移 DB 等失败时不阻断学习流程
+				});
 				// 答对：标记为完成，进度推进
 				setQueue((prev) =>
 					prev.map((item) =>

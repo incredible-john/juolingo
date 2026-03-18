@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `challenge_progress_user_challenge_idx` ON `challenge_progress` (`user_id`,`challenge_id`);
