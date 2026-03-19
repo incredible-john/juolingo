@@ -11,6 +11,7 @@ import { SelectTranslationChallenge, getSelectTranslationCorrectAnswer } from "@
 import { LessonComplete } from "@/components/learn/LessonComplete";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { playCorrectSound, playIncorrectSound } from "@/lib/sounds";
+import { preloadChallenges, stopPreload } from "@/lib/preloadCache";
 
 const MAX_HEARTS = 5;
 
@@ -61,8 +62,10 @@ export function LearnPage() {
 				setLesson(data);
 				const challenges = data?.challenges ?? [];
 				setQueue(challenges.map((c) => ({ challenge: c, done: false, key: keyCounter++ })));
+				preloadChallenges(challenges);
 			})
 			.finally(() => setLoading(false));
+		return () => stopPreload();
 	}, [id]);
 
 	useEffect(() => {

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { playTts } from "@/lib/sounds";
+import { getCachedTranslation, fetchTranslation } from "@/lib/preloadCache";
 
 interface InteractiveWordProps {
 	word: string;
@@ -8,7 +9,7 @@ interface InteractiveWordProps {
 }
 
 export function InteractiveWord({ word, className }: InteractiveWordProps) {
-	const [translation, setTranslation] = useState<string | null>(null);
+	const [translation, setTranslation] = useState<string | null>(() => getCachedTranslation(word));
 	const [showTooltip, setShowTooltip] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [playing, setPlaying] = useState(false);
@@ -26,13 +27,8 @@ export function InteractiveWord({ word, className }: InteractiveWordProps) {
 		if (!translation) {
 			setLoading(true);
 			try {
-				const response = await fetch(
-					`/api/translate/translate?text=${encodeURIComponent(word)}&from=en&to=zh`
-				);
-				const data = await response.json();
-				if (data.translations && data.translations.length > 0) {
-					setTranslation(data.translations[0]);
-				}
+				const result = await fetchTranslation(word);
+				if (result) setTranslation(result);
 			} catch (error) {
 				console.error("Translation error:", error);
 			} finally {
