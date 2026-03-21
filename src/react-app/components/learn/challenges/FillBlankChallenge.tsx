@@ -87,6 +87,16 @@ export function FillBlankChallenge({ challenge, onAnswer, answered }: FillBlankC
 				))}
 			</div>
 
+			{/* Translation after answering */}
+			{answered && challenge.sentence && (
+				<div className="px-6 py-3 mx-6 mb-2 rounded-2xl bg-duo-blue/5 border border-duo-blue/20">
+					<p className="text-base font-medium text-foreground">{challenge.sentence}</p>
+					{challenge.translation && (
+						<p className="text-sm text-muted-foreground mt-1">{challenge.translation}</p>
+					)}
+				</div>
+			)}
+
 			{/* Check button */}
 			{!answered && (
 				<CheckButton

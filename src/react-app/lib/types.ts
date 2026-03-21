@@ -34,7 +34,8 @@ export type ChallengeType =
 	| "TRANSLATE"
 	| "FILL_BLANK"
 	| "MATCH_PAIRS"
-	| "SELECT_TRANSLATION";
+	| "SELECT_TRANSLATION"
+	| "VERB_CONJUGATION";
 
 export interface ChallengeOption {
 	id: number;
@@ -59,6 +60,8 @@ export interface Challenge {
 	lessonId: number;
 	type: ChallengeType;
 	question: string;
+	sentence: string | null;
+	translation: string | null;
 	audioUrl: string | null;
 	order: number;
 	createdAt: string;

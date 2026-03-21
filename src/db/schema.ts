@@ -62,7 +62,8 @@ export type ChallengeType =
 	| "TRANSLATE"
 	| "FILL_BLANK"
 	| "MATCH_PAIRS"
-	| "SELECT_TRANSLATION";
+	| "SELECT_TRANSLATION"
+	| "VERB_CONJUGATION";
 
 export const challenges = sqliteTable("challenges", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
@@ -71,6 +72,8 @@ export const challenges = sqliteTable("challenges", {
 		.references(() => lessons.id, { onDelete: "cascade" }),
 	type: text("type").notNull().$type<ChallengeType>(),
 	question: text("question").notNull(),
+	sentence: text("sentence"),
+	translation: text("translation"),
 	audioUrl: text("audio_url"),
 	order: integer("order").notNull().default(0),
 	createdAt: text("created_at")

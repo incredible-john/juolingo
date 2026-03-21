@@ -8,6 +8,7 @@ import { TranslationAssemblyChallenge, getTranslationAssemblyCorrectAnswer } fro
 import { FillBlankChallenge, getFillBlankCorrectAnswer } from "@/components/learn/challenges/FillBlankChallenge";
 import { MatchPairsChallenge, getMatchPairsCorrectAnswer } from "@/components/learn/challenges/MatchPairsChallenge";
 import { SelectTranslationChallenge, getSelectTranslationCorrectAnswer } from "@/components/learn/challenges/SelectTranslationChallenge";
+import { VerbConjugationChallenge, getVerbConjugationCorrectAnswer } from "@/components/learn/challenges/VerbConjugationChallenge";
 import { LessonComplete } from "@/components/learn/LessonComplete";
 import { MobileShell } from "@/components/layout/MobileShell";
 import { playCorrectSound, playIncorrectSound } from "@/lib/sounds";
@@ -32,6 +33,8 @@ function getCorrectAnswer(challenge: Challenge): string {
 			return getMatchPairsCorrectAnswer(challenge);
 		case "SELECT_TRANSLATION":
 			return getSelectTranslationCorrectAnswer(challenge);
+		case "VERB_CONJUGATION":
+			return getVerbConjugationCorrectAnswer(challenge);
 	}
 }
 
@@ -205,6 +208,13 @@ export function LearnPage() {
 					)}
 					{current.type === "SELECT_TRANSLATION" && (
 						<SelectTranslationChallenge
+							challenge={current}
+							onAnswer={handleAnswer}
+							answered={answered}
+						/>
+					)}
+					{current.type === "VERB_CONJUGATION" && (
+						<VerbConjugationChallenge
 							challenge={current}
 							onAnswer={handleAnswer}
 							answered={answered}
