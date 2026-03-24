@@ -1,16 +1,21 @@
-import { getCachedAudioUrl } from "./preloadCache";
+import { getCachedAudioUrl, type TtsVariant } from "./preloadCache";
 
 let currentTtsAudio: HTMLAudioElement | null = null;
+
+function getUrlVariant(url: string): TtsVariant {
+	const variantMatch = url.match(/[?&]variant=([^&]*)/);
+	return variantMatch?.[1] === "slow" ? "slow" : "normal";
+}
 
 export function playTts(url: string): HTMLAudioElement {
 	if (currentTtsAudio) {
 		currentTtsAudio.pause();
 		currentTtsAudio = null;
 	}
-	// Try to extract text from TTS URL and use cached blob
 	const textMatch = url.match(/[?&]text=([^&]*)/);
 	const text = textMatch ? decodeURIComponent(textMatch[1]) : null;
-	const cachedUrl = text ? getCachedAudioUrl(text) : null;
+	const variant = getUrlVariant(url);
+	const cachedUrl = text ? getCachedAudioUrl(text, variant) : null;
 	const audio = new Audio(cachedUrl ?? url);
 	currentTtsAudio = audio;
 	audio.addEventListener("ended", () => {

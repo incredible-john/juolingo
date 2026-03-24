@@ -4,10 +4,11 @@ import { cn } from "@/lib/utils";
 interface FeedbackBannerProps {
 	isCorrect: boolean;
 	correctAnswer?: string;
+	translation?: string | null;
 	onContinue: () => void;
 }
 
-export function FeedbackBanner({ isCorrect, correctAnswer, onContinue }: FeedbackBannerProps) {
+export function FeedbackBanner({ isCorrect, correctAnswer, translation, onContinue }: FeedbackBannerProps) {
 	return (
 		<div
 			className={cn(
@@ -28,6 +29,12 @@ export function FeedbackBanner({ isCorrect, correctAnswer, onContinue }: Feedbac
 					</>
 				)}
 			</div>
+
+			{isCorrect && translation && (
+				<p className="text-sm text-duo-green-dark mb-3">
+					Translation: <strong>{translation}</strong>
+				</p>
+			)}
 
 			{!isCorrect && correctAnswer && (
 				<p className="text-sm text-duo-red-dark mb-3">

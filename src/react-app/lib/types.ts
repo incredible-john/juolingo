@@ -35,7 +35,8 @@ export type ChallengeType =
 	| "FILL_BLANK"
 	| "MATCH_PAIRS"
 	| "SELECT_TRANSLATION"
-	| "VERB_CONJUGATION";
+	| "VERB_CONJUGATION"
+	| "DICTATION_ASSEMBLY";
 
 export type ChallengeTokenType = "token" | "punctuation";
 

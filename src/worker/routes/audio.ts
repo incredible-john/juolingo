@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import type { AppEnv } from "../types";
 
+type TtsVariant = "normal" | "slow";
+
 async function hashText(text: string): Promise<string> {
 	const encoder = new TextEncoder();
 	const data = encoder.encode(text.trim().toLowerCase());
@@ -10,16 +12,21 @@ async function hashText(text: string): Promise<string> {
 	return hashArray.slice(0, 16).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function getTtsVariant(rawVariant: string | undefined): TtsVariant {
+	return rawVariant === "slow" ? "slow" : "normal";
+}
+
 const app = new Hono<{ Bindings: AppEnv }>();
 
 app.get("/tts", async (c) => {
 	const text = c.req.query("text");
+	const variant = getTtsVariant(c.req.query("variant"));
 	if (!text || !text.trim()) {
 		return c.json({ error: "Missing text parameter" }, 400);
 	}
 
 	const hash = await hashText(text);
-	const key = `tts/${hash}.mp3`;
+	const key = `tts/${variant}/${hash}.mp3`;
 
 	const cached = await c.env.VOICE_BUCKET.get(key);
 	if (cached) {
@@ -33,9 +40,12 @@ app.get("/tts", async (c) => {
 
 	const elevenlabs = new ElevenLabsClient({ apiKey: c.env.ELEVENLABS_API_KEY });
 	const audioStream = await elevenlabs.textToSpeech.convert("nmmIJ8k3ukOa1CSFlor3", {
-		modelId: "eleven_v3",
+		modelId: variant === "slow" ? "eleven_multilingual_v2" : "eleven_v3",
 		text: text.trim(),
-		outputFormat: "mp3_44100_128"
+		outputFormat: "mp3_44100_128",
+		voiceSettings: {
+			speed: variant === "slow" ? 0.7 : 1,
+		}
 	});
 
 	const buffer = await new Response(audioStream as unknown as ReadableStream).arrayBuffer();

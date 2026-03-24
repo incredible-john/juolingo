@@ -1,27 +1,31 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router";
-import { getLesson, markChallengeComplete } from "@/lib/api";
-import type { Challenge, LessonWithChallenges } from "@/lib/types";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { ChallengeHeader } from "@/components/learn/challenges/ChallengeHeader";
+import { DictationAssemblyChallenge, getDictationAssemblyCorrectAnswer } from "@/components/learn/challenges/DictationAssemblyChallenge";
 import { FeedbackBanner } from "@/components/learn/challenges/FeedbackBanner";
-import { TranslationAssemblyChallenge, getTranslationAssemblyCorrectAnswer } from "@/components/learn/challenges/TranslationAssemblyChallenge";
 import { FillBlankChallenge, getFillBlankCorrectAnswer } from "@/components/learn/challenges/FillBlankChallenge";
 import { MatchPairsChallenge, getMatchPairsCorrectAnswer } from "@/components/learn/challenges/MatchPairsChallenge";
 import { SelectTranslationChallenge, getSelectTranslationCorrectAnswer } from "@/components/learn/challenges/SelectTranslationChallenge";
+import { TranslationAssemblyChallenge, getTranslationAssemblyCorrectAnswer } from "@/components/learn/challenges/TranslationAssemblyChallenge";
 import { VerbConjugationChallenge, getVerbConjugationCorrectAnswer } from "@/components/learn/challenges/VerbConjugationChallenge";
 import { LessonComplete } from "@/components/learn/LessonComplete";
 import { MobileShell } from "@/components/layout/MobileShell";
-import { playCorrectSound, playIncorrectSound } from "@/lib/sounds";
+import { getLesson, markChallengeComplete } from "@/lib/api";
 import { preloadChallenges, stopPreload } from "@/lib/preloadCache";
+import { playCorrectSound, playIncorrectSound } from "@/lib/sounds";
+import type { Challenge, LessonWithChallenges } from "@/lib/types";
 
 const MAX_HEARTS = 5;
 
 type QueueItem = {
 	challenge: Challenge;
 	done: boolean;
-	/** unique key per attempt, used to force re-mount on retry */
 	key: number;
 };
+
+interface LearnPageProps {
+	mockLesson?: LessonWithChallenges;
+}
 
 function getCorrectAnswer(challenge: Challenge): string {
 	switch (challenge.type) {
@@ -35,89 +39,108 @@ function getCorrectAnswer(challenge: Challenge): string {
 			return getSelectTranslationCorrectAnswer(challenge);
 		case "VERB_CONJUGATION":
 			return getVerbConjugationCorrectAnswer(challenge);
+		case "DICTATION_ASSEMBLY":
+			return getDictationAssemblyCorrectAnswer(challenge);
 	}
 }
 
 function checkAnswer(challenge: Challenge, answer: string): boolean {
-	const correct = getCorrectAnswer(challenge);
-	return answer === correct;
+	return answer === getCorrectAnswer(challenge);
 }
 
 let keyCounter = 0;
 
-export function LearnPage() {
+export function LearnPage({ mockLesson }: LearnPageProps) {
 	const { id } = useParams();
 	const navigate = useNavigate();
 	const [lesson, setLesson] = useState<LessonWithChallenges | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [queue, setQueue] = useState<QueueItem[]>([]);
 	const [currentIndex, setCurrentIndex] = useState(0);
-	// 暂时解除红心限制：不扣心，始终视为满心
 	const hearts = MAX_HEARTS;
 	const [answered, setAnswered] = useState(false);
 	const [isCorrect, setIsCorrect] = useState(false);
 	const [isComplete, setIsComplete] = useState(false);
 
 	useEffect(() => {
-		if (!id) return;
+		setCurrentIndex(0);
+		setAnswered(false);
+		setIsCorrect(false);
+		setIsComplete(false);
+		setLesson(null);
+		setQueue([]);
+
+		if (mockLesson) {
+			setLesson(mockLesson);
+			setQueue(mockLesson.challenges.map((challenge) => ({ challenge, done: false, key: keyCounter++ })));
+			preloadChallenges(mockLesson.challenges);
+			setLoading(false);
+			return () => stopPreload();
+		}
+
+		if (!id) {
+			setLoading(false);
+			return;
+		}
+
+		setLoading(true);
 		getLesson(Number(id))
 			.then((data) => {
 				setLesson(data);
 				const challenges = data?.challenges ?? [];
-				setQueue(challenges.map((c) => ({ challenge: c, done: false, key: keyCounter++ })));
+				setQueue(challenges.map((challenge) => ({ challenge, done: false, key: keyCounter++ })));
 				preloadChallenges(challenges);
 			})
 			.finally(() => setLoading(false));
+
 		return () => stopPreload();
-	}, [id]);
+	}, [id, mockLesson]);
 
 	useEffect(() => {
 		if (!loading && queue.length > 0 && currentIndex >= queue.length) {
-			// 所有题目都完成了，显示完成界面
 			setIsComplete(true);
 		}
-	}, [queue.length, currentIndex, loading]);
+	}, [currentIndex, loading, queue.length]);
 
-	const currentItem = queue[currentIndex] as QueueItem | undefined;
+	const currentItem = queue[currentIndex];
 	const current = currentItem?.challenge;
-
-	// 进度 = 已完成数 / 总数，在 handleAnswer 时就已更新，点击 Continue 不会引起变化
 	const completedCount = queue.filter((item) => item.done).length;
 	const progress = queue.length > 0 ? completedCount / queue.length : 0;
 
 	const handleAnswer = useCallback(
 		(answer: string) => {
-			if (!currentItem || !current) return;
+			if (!current || !currentItem) return;
+
 			const correct = checkAnswer(current, answer);
 			setIsCorrect(correct);
 			setAnswered(true);
+
 			if (correct) {
 				playCorrectSound();
-				void markChallengeComplete(current.id).catch(() => {
-					// 网络/未迁移 DB 等失败时不阻断学习流程
-				});
-				// 答对：标记为完成，进度推进
+				if (!mockLesson && current.id > 0) {
+					void markChallengeComplete(current.id).catch(() => {});
+				}
 				setQueue((prev) =>
 					prev.map((item) =>
 						item.key === currentItem.key ? { ...item, done: true } : item
 					)
 				);
-			} else {
-				playIncorrectSound();
-				// 答错：标记为完成并追加副本到队尾，进度以新总数为分母推进（红心限制已暂时解除）
-				setQueue((prev) => {
-					const updated = prev.map((item) =>
-						item.key === currentItem.key ? { ...item, done: true } : item
-					);
-					return [...updated, { challenge: currentItem.challenge, done: false, key: keyCounter++ }];
-				});
+				return;
 			}
+
+			playIncorrectSound();
+			setQueue((prev) => {
+				const updated = prev.map((item) =>
+					item.key === currentItem.key ? { ...item, done: true } : item
+				);
+				return [...updated, { challenge: currentItem.challenge, done: false, key: keyCounter++ }];
+			});
 		},
-		[current, currentItem]
+		[current, currentItem, mockLesson]
 	);
 
 	const handleContinue = useCallback(() => {
-		setCurrentIndex((i) => i + 1);
+		setCurrentIndex((index) => index + 1);
 		setAnswered(false);
 		setIsCorrect(false);
 	}, []);
@@ -125,8 +148,8 @@ export function LearnPage() {
 	if (loading) {
 		return (
 			<MobileShell>
-				<div className="flex-1 flex items-center justify-center">
-					<div className="h-8 w-8 rounded-full border-4 border-duo-green border-t-transparent animate-spin" />
+				<div className="flex flex-1 items-center justify-center">
+					<div className="h-8 w-8 animate-spin rounded-full border-4 border-duo-green border-t-transparent" />
 				</div>
 			</MobileShell>
 		);
@@ -135,11 +158,11 @@ export function LearnPage() {
 	if (!lesson || queue.length === 0) {
 		return (
 			<MobileShell>
-				<div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
-					<p className="text-lg mb-4">No challenges found for this lesson.</p>
+				<div className="flex flex-1 flex-col items-center justify-center p-8 text-muted-foreground">
+					<p className="mb-4 text-lg">No challenges found for this lesson.</p>
 					<button
 						onClick={() => navigate(-1)}
-						className="px-6 py-2 rounded-xl bg-duo-green text-white font-bold"
+						className="rounded-xl bg-duo-green px-6 py-2 font-bold text-white"
 					>
 						Go back
 					</button>
@@ -147,25 +170,6 @@ export function LearnPage() {
 			</MobileShell>
 		);
 	}
-
-	// 暂时解除红心限制：不再因红心用尽而结束课程
-	// if (hearts <= 0) {
-	// 	return (
-	// 		<MobileShell>
-	// 			<div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-	// 				<div className="text-6xl mb-4">💔</div>
-	// 				<h2 className="text-2xl font-bold mb-2">Out of hearts!</h2>
-	// 				<p className="text-muted-foreground mb-6">Better luck next time.</p>
-	// 				<button
-	// 					onClick={() => navigate(-1)}
-	// 					className="px-8 py-3 rounded-2xl bg-duo-green text-white font-bold border-b-4 border-duo-green-dark"
-	// 				>
-	// 					Go back
-	// 				</button>
-	// 			</div>
-	// 		</MobileShell>
-	// 	);
-	// }
 
 	if (isComplete) {
 		return (
@@ -177,48 +181,27 @@ export function LearnPage() {
 
 	return (
 		<MobileShell>
-			<ChallengeHeader
-				progress={progress}
-				hearts={hearts}
-				maxHearts={MAX_HEARTS}
-			/>
+			<ChallengeHeader progress={progress} hearts={hearts} maxHearts={MAX_HEARTS} />
 
 			{current && currentItem && (
-				<div className="flex-1 flex flex-col" key={currentItem.key}>
+				<div className="flex flex-1 flex-col" key={currentItem.key}>
 					{current.type === "TRANSLATE" && (
-						<TranslationAssemblyChallenge
-							challenge={current}
-							onAnswer={handleAnswer}
-							answered={answered}
-						/>
+						<TranslationAssemblyChallenge challenge={current} onAnswer={handleAnswer} answered={answered} />
 					)}
 					{current.type === "FILL_BLANK" && (
-						<FillBlankChallenge
-							challenge={current}
-							onAnswer={handleAnswer}
-							answered={answered}
-						/>
+						<FillBlankChallenge challenge={current} onAnswer={handleAnswer} answered={answered} />
 					)}
 					{current.type === "MATCH_PAIRS" && (
-						<MatchPairsChallenge
-							challenge={current}
-							onAnswer={handleAnswer}
-							answered={answered}
-						/>
+						<MatchPairsChallenge challenge={current} onAnswer={handleAnswer} answered={answered} />
 					)}
 					{current.type === "SELECT_TRANSLATION" && (
-						<SelectTranslationChallenge
-							challenge={current}
-							onAnswer={handleAnswer}
-							answered={answered}
-						/>
+						<SelectTranslationChallenge challenge={current} onAnswer={handleAnswer} answered={answered} />
 					)}
 					{current.type === "VERB_CONJUGATION" && (
-						<VerbConjugationChallenge
-							challenge={current}
-							onAnswer={handleAnswer}
-							answered={answered}
-						/>
+						<VerbConjugationChallenge challenge={current} onAnswer={handleAnswer} answered={answered} />
+					)}
+					{current.type === "DICTATION_ASSEMBLY" && (
+						<DictationAssemblyChallenge challenge={current} onAnswer={handleAnswer} answered={answered} />
 					)}
 				</div>
 			)}
@@ -227,6 +210,7 @@ export function LearnPage() {
 				<FeedbackBanner
 					isCorrect={isCorrect}
 					correctAnswer={current ? getCorrectAnswer(current) : undefined}
+					translation={isCorrect ? current?.translation : undefined}
 					onContinue={handleContinue}
 				/>
 			)}

@@ -1,16 +1,25 @@
 import type { Challenge } from "./types";
 import { extractWords } from "./textSegmentation";
 
-// --- Audio cache: URL string → Blob URL ---
+export type TtsVariant = "normal" | "slow";
+
 const audioBlobCache = new Map<string, string>();
 const audioPendingCache = new Map<string, Promise<string | null>>();
 
-function ttsUrl(text: string): string {
-	return `/api/audio/tts?text=${encodeURIComponent(text)}`;
+export function buildTtsUrl(text: string, variant: TtsVariant = "normal"): string {
+	const params = new URLSearchParams({ text });
+	if (variant !== "normal") {
+		params.set("variant", variant);
+	}
+	return `/api/audio/tts?${params.toString()}`;
 }
 
-async function preloadAudio(text: string, signal?: AbortSignal): Promise<string | null> {
-	const url = ttsUrl(text);
+async function preloadAudio(
+	text: string,
+	signal?: AbortSignal,
+	variant: TtsVariant = "normal",
+): Promise<string | null> {
+	const url = buildTtsUrl(text, variant);
 	if (audioBlobCache.has(url)) return audioBlobCache.get(url)!;
 	if (audioPendingCache.has(url)) return audioPendingCache.get(url)!;
 
@@ -28,12 +37,10 @@ async function preloadAudio(text: string, signal?: AbortSignal): Promise<string 
 	return p;
 }
 
-/** Get cached blob URL for a TTS text, or null if not cached yet */
-export function getCachedAudioUrl(text: string): string | null {
-	return audioBlobCache.get(ttsUrl(text)) ?? null;
+export function getCachedAudioUrl(text: string, variant: TtsVariant = "normal"): string | null {
+	return audioBlobCache.get(buildTtsUrl(text, variant)) ?? null;
 }
 
-// --- Translation cache ---
 const translationCache = new Map<string, string>();
 const translationPendingCache = new Map<string, Promise<string | null>>();
 
@@ -57,12 +64,10 @@ async function preloadTranslation(word: string, signal?: AbortSignal): Promise<s
 	return p;
 }
 
-/** Get cached translation, or null */
 export function getCachedTranslation(word: string): string | null {
 	return translationCache.get(word) ?? null;
 }
 
-/** Fetch translation, using cache if available */
 export async function fetchTranslation(word: string): Promise<string | null> {
 	if (translationCache.has(word)) return translationCache.get(word)!;
 	return preloadTranslation(word);
@@ -70,7 +75,6 @@ export async function fetchTranslation(word: string): Promise<string | null> {
 
 let preloadAbort: AbortController | null = null;
 
-/** Stop all in-flight preload requests */
 export function stopPreload(): void {
 	if (preloadAbort) {
 		preloadAbort.abort();
@@ -78,11 +82,7 @@ export function stopPreload(): void {
 	}
 }
 
-/** Preload all audio + translations for challenges, sequentially by challenge order.
- *  Within each challenge: full question audio first, then word audios, then translations,
- *  then option audios (for MATCH_PAIRS, VERB_CONJUGATION, etc.). */
 export function preloadChallenges(challenges: Challenge[]): void {
-	// Abort any previous preload session
 	stopPreload();
 	const abort = new AbortController();
 	preloadAbort = abort;
@@ -94,11 +94,14 @@ export function preloadChallenges(challenges: Challenge[]): void {
 		for (const c of sorted) {
 			if (signal.aborted) return;
 
-			// 1. Full question audio (highest priority)
 			await preloadAudio(c.question, signal);
 			if (signal.aborted) return;
 
-			// 2. Per-word audio + translations (shared with challenge word segmentation)
+			if (c.type === "DICTATION_ASSEMBLY") {
+				await preloadAudio(c.question, signal, "slow");
+				if (signal.aborted) return;
+			}
+
 			const words = extractWords(c.question);
 			for (const word of words) {
 				if (signal.aborted) return;
@@ -109,7 +112,6 @@ export function preloadChallenges(challenges: Challenge[]): void {
 				await preloadTranslation(word, signal);
 			}
 
-			// 3. Option audios (important for MATCH_PAIRS, VERB_CONJUGATION, SELECT_TRANSLATION)
 			for (const opt of c.options) {
 				if (signal.aborted) return;
 				await preloadAudio(opt.text, signal);
