@@ -11,6 +11,21 @@
 		"preview_image_url": "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/ec7f4be5-d1d6-4e94-0851-126341745400/preview",
 		"publish": true
 	},
+	"scripts": {
+		"build": "tsc -b && vite build",
+		"cf-typegen": "wrangler types",
+		"check": "tsc && vite build && wrangler deploy --dry-run",
+		"deploy": "wrangler deploy",
+		"dev": "vite",
+		"lint": "eslint .",
+		"preview": "npm run build && vite preview",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate:local": "wrangler d1 migrations apply juolingo-db --local",
+		"db:migrate:remote": "wrangler d1 migrations apply juolingo-db --remote",
+		"db:seed:local": "wrangler d1 execute juolingo-db --local --file=src/db/seed.sql",
+		"db:seed:remote": "wrangler d1 execute juolingo-db --remote --file=src/db/seed.sql",
+		"db:setup:local": "npm run db:migrate:local && npm run db:seed:local"
+	},
 	"dependencies": {
 		"@clerk/backend": "^3.2.1",
 		"@clerk/localizations": "^4.2.1",
@@ -47,20 +62,5 @@
 		"wrangler": "4.56.0"
 	},
 	"private": true,
-	"scripts": {
-		"build": "tsc -b && vite build",
-		"cf-typegen": "wrangler types",
-		"check": "tsc && vite build && wrangler deploy --dry-run",
-		"deploy": "wrangler deploy",
-		"dev": "vite",
-		"lint": "eslint .",
-		"preview": "npm run build && vite preview",
-		"db:generate": "drizzle-kit generate",
-		"db:migrate:local": "wrangler d1 migrations apply juolingo-db --local",
-		"db:seed:local": "wrangler d1 execute juolingo-db --local --file=src/db/seed.sql",
-		"db:setup:local": "npm run db:migrate:local && npm run db:seed:local",
-		"db:migrate:remote": "wrangler d1 migrations apply juolingo-db --remote",
-		"db:seed:remote": "wrangler d1 execute juolingo-db --remote --file=src/db/seed.sql"
-	},
 	"type": "module"
 }
