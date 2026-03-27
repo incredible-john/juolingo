@@ -44,23 +44,16 @@
           ],
           "tokens": [
             {
-              "type": "token",
               "text": "A lion",
               "translation": "一只狮子"
             },
             {
-              "type": "token",
               "text": "was sleeping",
               "translation": "在睡觉"
             },
             {
-              "type": "token",
               "text": "under a tree",
               "translation": "在一棵树下面"
-            },
-            {
-              "type": "punctuation",
-              "text": "."
             }
           ]
         }

@@ -1,0 +1,1 @@
+ALTER TABLE `challenge_tokens` DROP COLUMN `type`;

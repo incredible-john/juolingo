@@ -1,0 +1,118 @@
+{
+  "subjectId": 2,
+  "title": "The Lion and the Mouse",
+  "description": "A fable about kindness and helping others",
+  "lessons": [
+    {
+      "title": "Animals & Nature",
+      "challenges": [
+        {
+          "type": "TRANSLATE",
+          "question": "The cat was sleeping under the tree.",
+          "sentence": null,
+          "translation": null,
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [
+            {
+              "text": "猫",
+              "isCorrect": true
+            },
+            {
+              "text": "在",
+              "isCorrect": true
+            },
+            {
+              "text": "树下",
+              "isCorrect": true
+            },
+            {
+              "text": "睡觉",
+              "isCorrect": true
+            },
+            {
+              "text": "老鼠",
+              "isCorrect": false
+            },
+            {
+              "text": "陷阱",
+              "isCorrect": false
+            }
+          ],
+          "tokens": []
+        },
+        {
+          "type": "TRANSLATE",
+          "question": "她正在读一本书。",
+          "sentence": null,
+          "translation": "She is reading a book.",
+          "sourceLang": "zh",
+          "targetLang": "en",
+          "options": [],
+          "tokens": []
+        },
+        {
+          "type": "DICTATION_ASSEMBLY",
+          "question": "She is reading a book.",
+          "sentence": null,
+          "translation": "她正在读一本书。",
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [],
+          "tokens": []
+        },
+        {
+          "type": "MATCH_PAIRS",
+          "question": "Match the English words with their Chinese translations.",
+          "sentence": null,
+          "translation": null,
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [
+            {
+              "text": "lion",
+              "isCorrect": true
+            },
+            {
+              "text": "狮子",
+              "isCorrect": true
+            },
+            {
+              "text": "mouse",
+              "isCorrect": true
+            },
+            {
+              "text": "老鼠",
+              "isCorrect": true
+            },
+            {
+              "text": "tree",
+              "isCorrect": true
+            },
+            {
+              "text": "树",
+              "isCorrect": true
+            },
+            {
+              "text": "little",
+              "isCorrect": true
+            },
+            {
+              "text": "小小的",
+              "isCorrect": true
+            },
+            {
+              "text": "under",
+              "isCorrect": true
+            },
+            {
+              "text": "在……下面",
+              "isCorrect": true
+            }
+          ],
+          "tokens": []
+        }
+      ]
+    }
+  ]
+}

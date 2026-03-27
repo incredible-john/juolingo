@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { Database } from "../../db";
 import * as schema from "../../db/schema";
-import type { ChallengeTokenType, ChallengeType, LanguageCode } from "../../db/schema";
+import type { ChallengeType, LanguageCode } from "../../db/schema";
 
 type ImportHttpStatus = 400 | 404 | 500;
 
@@ -31,14 +31,10 @@ export type UnitImportBody = {
 			sourceLang?: LanguageCode;
 			targetLang?: LanguageCode;
 			options?: Array<{ text: string; isCorrect: boolean }>;
-			tokens?: Array<{ type?: string; text: string; translation?: string | null }>;
+			tokens?: Array<{ text: string; translation?: string | null }>;
 		}>;
 	}>;
 };
-
-function normalizeTokenType(raw: string | undefined): ChallengeTokenType {
-	return raw === "punctuation" ? "punctuation" : "token";
-}
 
 export async function importUnitFromPayload(db: Database, data: UnitImportBody) {
 	const [sub] = await db
@@ -118,7 +114,6 @@ export async function importUnitFromPayload(db: Database, data: UnitImportBody) 
 				const tok = tokens[ti];
 				await db.insert(schema.challengeTokens).values({
 					challengeId: challenge.id,
-					type: normalizeTokenType(tok.type),
 					text: tok.text,
 					translation: tok.translation ?? null,
 					audioUrl: null,

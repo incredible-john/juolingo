@@ -1,0 +1,326 @@
+{
+  "subjectId": 2,
+  "title": "The Tortoise and the Hare",
+  "description": "Lesson 1 based on the first paragraph and key vocabulary",
+  "lessons": [
+    {
+      "title": "Bragging Rabbit",
+      "challenges": [
+        {
+          "type": "MATCH_PAIRS",
+          "question": "Match the English words with their Chinese translations.",
+          "sentence": null,
+          "translation": null,
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [
+            {
+              "text": "rabbit",
+              "isCorrect": true
+            },
+            {
+              "text": "兔子",
+              "isCorrect": true
+            },
+            {
+              "text": "tortoise",
+              "isCorrect": true
+            },
+            {
+              "text": "乌龟",
+              "isCorrect": true
+            },
+            {
+              "text": "brag about",
+              "isCorrect": true
+            },
+            {
+              "text": "吹嘘……",
+              "isCorrect": true
+            },
+            {
+              "text": "fast",
+              "isCorrect": true
+            },
+            {
+              "text": "快的",
+              "isCorrect": true
+            },
+            {
+              "text": "slow",
+              "isCorrect": true
+            },
+            {
+              "text": "慢的",
+              "isCorrect": true
+            }
+          ],
+          "tokens": []
+        },
+        {
+          "type": "MATCH_PAIRS",
+          "question": "Match the English words with their Chinese translations.",
+          "sentence": null,
+          "translation": null,
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [
+            {
+              "text": "once",
+              "isCorrect": true
+            },
+            {
+              "text": "曾经；从前",
+              "isCorrect": true
+            },
+            {
+              "text": "always",
+              "isCorrect": true
+            },
+            {
+              "text": "总是",
+              "isCorrect": true
+            },
+            {
+              "text": "brag",
+              "isCorrect": true
+            },
+            {
+              "text": "吹嘘",
+              "isCorrect": true
+            },
+            {
+              "text": "get out of",
+              "isCorrect": true
+            },
+            {
+              "text": "离开；从……出来",
+              "isCorrect": true
+            },
+            {
+              "text": "rabbit",
+              "isCorrect": true
+            },
+            {
+              "text": "兔子",
+              "isCorrect": true
+            }
+          ],
+          "tokens": []
+        },
+        {
+          "type": "TRANSLATE",
+          "question": "There once was a rabbit.",
+          "sentence": null,
+          "translation": null,
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [
+            {
+              "text": "从前",
+              "isCorrect": true
+            },
+            {
+              "text": "有",
+              "isCorrect": true
+            },
+            {
+              "text": "一只",
+              "isCorrect": true
+            },
+            {
+              "text": "兔子",
+              "isCorrect": true
+            },
+            {
+              "text": "乌龟",
+              "isCorrect": false
+            },
+            {
+              "text": "树林",
+              "isCorrect": false
+            }
+          ],
+          "tokens": []
+        },
+        {
+          "type": "TRANSLATE",
+          "question": "He always bragged about being fast.",
+          "sentence": null,
+          "translation": null,
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [
+            {
+              "text": "他",
+              "isCorrect": true
+            },
+            {
+              "text": "总是",
+              "isCorrect": true
+            },
+            {
+              "text": "吹嘘",
+              "isCorrect": true
+            },
+            {
+              "text": "自己",
+              "isCorrect": true
+            },
+            {
+              "text": "很快",
+              "isCorrect": true
+            },
+            {
+              "text": "睡觉",
+              "isCorrect": false
+            },
+            {
+              "text": "比赛",
+              "isCorrect": false
+            }
+          ],
+          "tokens": []
+        },
+        {
+          "type": "TRANSLATE",
+          "question": "Get out of the way.",
+          "sentence": null,
+          "translation": null,
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [
+            {
+              "text": "让开",
+              "isCorrect": true
+            },
+            {
+              "text": "停下",
+              "isCorrect": false
+            },
+            {
+              "text": "回头",
+              "isCorrect": false
+            }
+          ],
+          "tokens": []
+        },
+        {
+          "type": "TRANSLATE",
+          "question": "He teased the tortoise for being slow.",
+          "sentence": null,
+          "translation": null,
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [
+            {
+              "text": "他",
+              "isCorrect": true
+            },
+            {
+              "text": "嘲笑",
+              "isCorrect": true
+            },
+            {
+              "text": "乌龟",
+              "isCorrect": true
+            },
+            {
+              "text": "很慢",
+              "isCorrect": true
+            },
+            {
+              "text": "山坡",
+              "isCorrect": false
+            },
+            {
+              "text": "赢了",
+              "isCorrect": false
+            }
+          ],
+          "tokens": []
+        },
+        {
+          "type": "TRANSLATE",
+          "question": "这只兔子总是吹嘘。",
+          "sentence": null,
+          "translation": "The rabbit always brags.",
+          "sourceLang": "zh",
+          "targetLang": "en",
+          "options": [],
+          "tokens": []
+        },
+        {
+          "type": "TRANSLATE",
+          "question": "那只乌龟跑得很慢。",
+          "sentence": null,
+          "translation": "The tortoise is very slow.",
+          "sourceLang": "zh",
+          "targetLang": "en",
+          "options": [],
+          "tokens": []
+        },
+        {
+          "type": "TRANSLATE",
+          "question": "他是树林里跑得最快的。",
+          "sentence": null,
+          "translation": "He is the fastest runner in the woods.",
+          "sourceLang": "zh",
+          "targetLang": "en",
+          "options": [],
+          "tokens": []
+        },
+        {
+          "type": "TRANSLATE",
+          "question": "别挡路，快让开。",
+          "sentence": null,
+          "translation": "Get out of the way.",
+          "sourceLang": "zh",
+          "targetLang": "en",
+          "options": [],
+          "tokens": []
+        },
+        {
+          "type": "DICTATION_ASSEMBLY",
+          "question": "The rabbit always bragged.",
+          "sentence": null,
+          "translation": "这只兔子总是吹嘘。",
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [],
+          "tokens": []
+        },
+        {
+          "type": "DICTATION_ASSEMBLY",
+          "question": "Get out of the way.",
+          "sentence": null,
+          "translation": "让开。",
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [],
+          "tokens": []
+        },
+        {
+          "type": "DICTATION_ASSEMBLY",
+          "question": "I'm the best!",
+          "sentence": null,
+          "translation": "我是最棒的！",
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [],
+          "tokens": []
+        },
+        {
+          "type": "DICTATION_ASSEMBLY",
+          "question": "He always teased the tortoise for being slow.",
+          "sentence": null,
+          "translation": "他总是嘲笑乌龟很慢。",
+          "sourceLang": "en",
+          "targetLang": "zh",
+          "options": [],
+          "tokens": []
+        }
+      ]
+    }
+  ]
+}

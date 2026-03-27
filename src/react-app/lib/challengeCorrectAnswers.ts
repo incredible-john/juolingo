@@ -14,11 +14,11 @@ function getTranslationAssemblyCorrectAnswer(challenge: Challenge): string {
 			.filter((option) => option.isCorrect)
 			.sort((a, b) => a.order - b.order)
 			.map((option) => option.text)
-			.join("");
+			.join(" ");
 	}
 
 	const parts = challenge.translation ? extractWords(challenge.translation, targetLang) : [];
-	return parts.join("");
+	return parts.join(" ");
 }
 
 function getFillBlankCorrectAnswer(challenge: Challenge): string {
@@ -65,7 +65,7 @@ function getVerbConjugationCorrectAnswer(challenge: Challenge): string {
 }
 
 function getDictationAssemblyCorrectAnswer(challenge: Challenge): string {
-	return extractWords(challenge.question).join("");
+	return extractWords(challenge.question).join(" ");
 }
 
 export function getChallengeCorrectAnswer(challenge: Challenge): string {

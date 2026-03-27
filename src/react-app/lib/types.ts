@@ -1,4 +1,4 @@
-export type { ChallengeType, ChallengeTokenType, LanguageCode } from "../../db/schema";
+export type { ChallengeType, LanguageCode } from "../../db/schema";
 
 export type Subject = typeof import("../../db/schema").subjects.$inferSelect;
 

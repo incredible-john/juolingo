@@ -36,15 +36,10 @@ function sanitizeUnitExportTree(unit: UnitWithLessons) {
 					text: opt.text,
 					isCorrect: opt.isCorrect,
 				})),
-				tokens: ch.tokens.map((tok) =>
-					tok.type === "punctuation"
-						? { type: "punctuation" as const, text: tok.text }
-						: {
-								type: "token" as const,
-								text: tok.text,
-								translation: tok.translation ?? null,
-							},
-				),
+				tokens: ch.tokens.map((tok) => ({
+					text: tok.text,
+					translation: tok.translation ?? null,
+				})),
 			})),
 		})),
 	};
@@ -98,6 +93,7 @@ app.get("/units", async (c) => {
  * Import a unit tree (export JSON shape). Orders for lessons / challenges / options / tokens
  * follow array order in the payload. Query `subjectId` overrides body.subjectId when present.
  */
+// node scripts/import-unit.mjs prd/unit-6-export.json
 app.post("/units/import", async (c) => {
 	const db = getDb(c.env.DB);
 	let body: unknown;
@@ -130,6 +126,7 @@ app.post("/units/import", async (c) => {
 });
 
 /** Full unit tree for backup / import (no user progress). */
+// curl -o unit-6-export.json "http://localhost:5173/api/admin/units/6/export?download=1"
 app.get("/units/:id/export", async (c) => {
 	const db = getDb(c.env.DB);
 	const unitId = Number(c.req.param("id"));

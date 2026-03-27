@@ -90,7 +90,7 @@ export function TranslationAssemblyChallenge({ challenge, onAnswer, answered }: 
 					return itemInToken;
 				}
 
-				// If token has multiple words, check context: adjacent *word* segments only (skip spaces/punctuation)
+				// If token contains multiple words, use adjacent word segments as context.
 				let neighborWordInToken = false;
 				if (prevWordPiece && tokenWords.includes(prevWordPiece.value)) {
 					neighborWordInToken = true;
@@ -135,7 +135,7 @@ export function TranslationAssemblyChallenge({ challenge, onAnswer, answered }: 
 	);
 
 	const handleCheck = () => {
-		onAnswer(selectedOptions.map((option) => option.text).join(""));
+		onAnswer(selectedOptions.map((option) => option.text).join(" "));
 	};
 
 	return (

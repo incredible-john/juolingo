@@ -68,9 +68,6 @@ export type ChallengeType =
 
 export type LanguageCode = "en" | "zh";
 
-/** Display / import: word chunk vs punctuation in tokenized English. */
-export type ChallengeTokenType = "token" | "punctuation";
-
 export const challenges = sqliteTable("challenges", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
 	lessonId: integer("lesson_id")
@@ -138,7 +135,6 @@ export const challengeTokens = sqliteTable("challenge_tokens", {
 	challengeId: integer("challenge_id")
 		.notNull()
 		.references(() => challenges.id, { onDelete: "cascade" }),
-	type: text("type").notNull().default("token").$type<ChallengeTokenType>(),
 	text: text("text").notNull(),
 	translation: text("translation"),
 	audioUrl: text("audio_url"),
