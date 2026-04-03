@@ -58,31 +58,31 @@ export function UnitsPage() {
 										)}
 									</div>
 
-									<div className="flex flex-col items-center gap-4">
-										{unit.lessons.map((lesson, lessonIdx) => {
-											return (
-												<Link
-													key={lesson.id}
-													to={`/lessons/${lesson.id}`}
-													className={cn(
-														"relative flex h-16 w-16 items-center justify-center rounded-full border-b-4 transition-all active:scale-95 active:border-b-2",
-														lesson.completed
-															? `${color.bg} border-${color.bg === "bg-duo-green" ? "duo-green-dark" : "black/20"} ${color.text} shadow-lg`
-															: "bg-duo-gray border-duo-gray-dark text-muted-foreground"
-													)}
-													style={{
-														marginLeft: `${Math.sin(lessonIdx * 1.2) * 40}px`,
-													}}
-												>
-													{lesson.completed ? (
-														<Star size={28} fill="currentColor" />
-													) : (
-														<Lock size={20} />
-													)}
-												</Link>
-											);
-										})}
-									</div>
+								<div className="flex flex-wrap justify-center gap-3">
+									{unit.lessons.map((lesson, lessonIdx) => {
+										return (
+											<Link
+												key={lesson.id}
+												to={`/lessons/${lesson.id}`}
+												className={cn(
+													"relative flex flex-col items-center justify-center gap-1 h-16 w-16 rounded-2xl border-b-4 transition-all active:scale-95 active:border-b-2",
+													lesson.completed
+														? `${color.bg} border-${color.bg === "bg-duo-green" ? "duo-green-dark" : "black/20"} ${color.text} shadow-lg`
+														: "bg-duo-gray border-duo-gray-dark text-muted-foreground"
+												)}
+											>
+												{lesson.completed ? (
+													<Star size={20} fill="currentColor" />
+												) : (
+													<Lock size={16} />
+												)}
+												<span className="text-[10px] font-bold leading-none">
+													{lessonIdx + 1}
+												</span>
+											</Link>
+										);
+									})}
+								</div>
 								</section>
 							);
 						})}
