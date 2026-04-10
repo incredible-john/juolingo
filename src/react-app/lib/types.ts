@@ -23,5 +23,6 @@ export type Challenge = typeof import("../../db/schema").challenges.$inferSelect
 };
 
 export type LessonWithChallenges = Lesson & {
+	subjectId?: number | null;
 	challenges: Challenge[];
 };

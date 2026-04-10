@@ -5,9 +5,10 @@ import { playFinishSound } from "@/lib/sounds";
 interface LessonCompleteProps {
 	hearts: number;
 	maxHearts: number;
+	subjectId?: number | null;
 }
 
-export function LessonComplete({ hearts, maxHearts }: LessonCompleteProps) {
+export function LessonComplete({ hearts, maxHearts, subjectId }: LessonCompleteProps) {
 	const navigate = useNavigate();
 
 	useEffect(() => {
@@ -41,7 +42,7 @@ export function LessonComplete({ hearts, maxHearts }: LessonCompleteProps) {
 			{/* 按钮组 */}
 			<div className="flex flex-col gap-3 w-full max-w-xs">
 				<button
-					onClick={() => navigate("/")}
+					onClick={() => navigate(subjectId ? `/subjects/${subjectId}` : "/")}
 					className="px-8 py-3 rounded-2xl bg-duo-green text-white font-bold border-b-4 border-duo-green-dark active:border-b-0 active:translate-y-1 transition-all"
 				>
 					Continue

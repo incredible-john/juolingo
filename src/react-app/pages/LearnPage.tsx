@@ -159,7 +159,7 @@ export function LearnPage({ mockLesson }: LearnPageProps) {
 	if (isComplete) {
 		return (
 			<MobileShell>
-				<LessonComplete hearts={hearts} maxHearts={MAX_HEARTS} />
+				<LessonComplete hearts={hearts} maxHearts={MAX_HEARTS} subjectId={lesson.subjectId} />
 			</MobileShell>
 		);
 	}

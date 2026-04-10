@@ -20,6 +20,12 @@ app.get("/:id", async (c) => {
 		return c.json({ error: "Lesson not found" }, 404);
 	}
 
+	const [unit] = await db
+		.select({ subjectId: schema.units.subjectId })
+		.from(schema.units)
+		.where(eq(schema.units.id, lesson.unitId))
+		.limit(1);
+
 	const allChallenges = await db
 		.select()
 		.from(schema.challenges)
@@ -54,6 +60,7 @@ app.get("/:id", async (c) => {
 
 	return c.json({
 		...lesson,
+		subjectId: unit?.subjectId ?? null,
 		challenges: challengesWithDetails,
 	});
 });
