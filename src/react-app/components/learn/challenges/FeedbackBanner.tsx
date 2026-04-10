@@ -12,7 +12,7 @@ export function FeedbackBanner({ isCorrect, correctAnswer, translation, onContin
 	return (
 		<div
 			className={cn(
-				"fixed bottom-0 left-0 right-0 z-50 px-6 py-4 transition-all animate-in slide-in-from-bottom-4 duration-300",
+				"fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 px-6 py-4 transition-all animate-in slide-in-from-bottom-4 duration-300",
 				isCorrect ? "bg-duo-green-light" : "bg-duo-red-light"
 			)}
 		>
